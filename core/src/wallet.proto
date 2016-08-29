@@ -210,6 +210,14 @@ message TransactionConfidence {
     // - from a wallet that uses trusted computing/secure hardware that won't create double spends
   }
   optional Source source = 7;
+
+  enum IXType {
+    IX_NONE = 0;
+    IX_REQUEST = 1;
+    IX_LOCKED = 2;
+  }
+
+  optional IXType ixType = 8 [default = IX_NONE];
 }
 
 /** A bitcoin transaction */

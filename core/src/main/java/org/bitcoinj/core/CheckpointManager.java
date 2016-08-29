@@ -331,6 +331,11 @@ public class CheckpointManager {
         return checkpoints.size();
     }
 
+    /** Returns a hash of the concatenated checkpoint data. */
+    public Sha256Hash getDataHash() {
+        return dataHash;
+    }
+
     /**
      * <p>Convenience method that creates a CheckpointManager, loads the given data, gets the checkpoint for the given
      * time, then inserts it into the store and sets that to be the chain head. Useful when you have just created

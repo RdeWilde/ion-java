@@ -26,9 +26,11 @@ import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
-
+import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.blackcoinj.pos.BlackcoinMagic;
+import org.darkcoinj.DarkSendPool;
+import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.*;
 import java.io.*;
@@ -56,13 +58,13 @@ public abstract class NetworkParameters implements Serializable {
      */
 	public static final byte[] SATOSHI_KEY = Utils.HEX.decode(BlackcoinMagic.blackAlertSigningKey);
     /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = "org.bitcoin.production";
+    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.bitcoin.production";
     /** The string returned by getId() for the testnet. */
-    public static final String ID_TESTNET = "org.bitcoin.test";
-    /** The string returned by getId() for regtest mode. */
-    public static final String ID_REGTEST = "org.bitcoin.regtest";
+    public static final String ID_TESTNET = CoinDefinition.ID_TESTNET; //"org.bitcoin.test";
     /** Unit test network. */
-    public static final String ID_UNITTESTNET = "org.bitcoinj.unittest";
+    public static final String ID_UNITTESTNET = CoinDefinition.ID_UNITTESTNET; //"com.google.bitcoin.unittest";
+    /** The string returned by getId() for regtest mode. */
+    public static final String ID_REGTEST = CoinDefinition.ID_REGTESTNET;
 
     /** The string used by the payment protocol to represent the main net. */
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
@@ -104,6 +106,21 @@ public abstract class NetworkParameters implements Serializable {
     protected int[] addrSeeds;
     protected HttpDiscovery.Details[] httpSeeds = {};
     protected Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
+
+
+
+
+    //Dash Extra Parameters
+    protected String strSporkKey;
+    String strMasternodePaymentsPubKey;
+    String strDarksendPoolDummyAddress;
+    long nStartMasternodePayments;
+
+
+
+    public String getSporkKey() {
+        return strSporkKey;
+    }
 
     protected NetworkParameters() {
         alertSigningKey = SATOSHI_KEY;
@@ -154,12 +171,14 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * The maximum number of coins to be generated
      */
-    public static final long MAX_COINS = Long.MAX_VALUE;
+    public static final long MAX_COINS = CoinDefinition.MAX_COINS;
 
     /**
      * The maximum money to be generated
      */
-    public static final Coin MAX_MONEY = Coin.valueOf(Long.MAX_VALUE);
+
+    public static final Coin MAX_MONEY = COIN.multiply(MAX_COINS);
+
 
     /** Alias for TestNet3Params.get(), use that instead. */
     @Deprecated

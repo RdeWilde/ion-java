@@ -17,6 +17,9 @@
 
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.CoinDefinition;
+import static org.bitcoinj.core.Utils.HEX;
+
 import java.math.BigInteger;
 import java.util.Date;
 
@@ -39,31 +42,29 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;
-        // Genesis hash is 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
-        packetMagic = BlackcoinMagic.packetMagic;
+
+        // Genesis hash is
+
+        packetMagic = CoinDefinition.testnetPacketMagic;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         maxTarget = BlackcoinMagic.proofOfWorkLimit;
-        port = BlackcoinMagic.port;
-        addressHeader = BlackcoinMagic.addressHeader;
-        p2shHeader = BlackcoinMagic.p2shHeader;
+        port = BlackcoinMagic.testPort;
+        addressHeader = BlackcoinMagic.testnetAddressHeader;
+        p2shHeader = BlackcoinMagic.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        dumpedPrivateKeyHeader = BlackcoinMagic.bulgarianConst + BlackcoinMagic.addressHeader;
-        genesisBlock.setTime(BlackcoinMagic.time);
-        genesisBlock.setDifficultyTarget(BlackcoinMagic.genesisDifficultyTarget);
-        genesisBlock.setNonce(BlackcoinMagic.nonce);
+        dumpedPrivateKeyHeader = BlackcoinMagic.bulgarianConst + BlackcoinMagic.testnetAddressHeader;
+        genesisBlock.setTime(BlackcoinMagic.testnetGenesisBlockTime);
+        genesisBlock.setDifficultyTarget(BlackcoinMagic.testnetGenesisBlockDifficultyTarget);
+        genesisBlock.setNonce(BlackcoinMagic.testnetGenesisBlockNonce);
         spendableCoinbaseDepth = BlackcoinMagic.spendableCoinbaseDepth;
-        subsidyDecreaseBlockCount = 210000;
+        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(BlackcoinMagic.checkpoint0));
-        alertSigningKey = Utils.HEX.decode(BlackcoinMagic.blackAlertSigningKey);
+        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash)); // TODO testcheckpoint[0]
+        alertSigningKey = Utils.HEX.decode(BlackcoinMagic.testBlackAlertSigningKey);
 
-        dnsSeeds = new String[] {
-        		BlackcoinMagic.dnsSeed0,       
-        		BlackcoinMagic.dnsSeed1,  
-        		BlackcoinMagic.dnsSeed2,
-        		BlackcoinMagic.dnsSeed3
-        };
+        dnsSeeds = CoinDefinition.testnetDnsSeeds;
+
         addrSeeds = null;
         bip32HeaderPub = BlackcoinMagic.bcpv; //The 4 byte header that serializes in base58 to "bcpv".
         bip32HeaderPriv = BlackcoinMagic.bcpb; //The 4 byte header that serializes in base58 to "bcpb"

@@ -100,8 +100,49 @@ public abstract class ListMessage extends Message {
                 case 3:
                     type = InventoryItem.Type.FilteredBlock;
                     break;
+                case 4:
+                    type = InventoryItem.Type.TransactionLockRequest;
+                    break;
+                case 5:
+                    type = InventoryItem.Type.TransactionLockVote;
+                    break;
+                case 6:
+                    type = InventoryItem.Type.Spork;
+                    break;
+                case 7:
+                    type = InventoryItem.Type.MasterNodeWinner;
+                    break;
+                case 8:
+                    type = InventoryItem.Type.MasterNodeScanningError;
+                    break;
+                case 9:
+                    type = InventoryItem.Type.BudgetVote;
+                    break;
+                case 10:
+                    type = InventoryItem.Type.BudgetProposal;
+                    break;
+                case 11:
+                    type = InventoryItem.Type.BudgetFinalized;
+                    break;
+                case 12:
+                    type = InventoryItem.Type.BudgetFinalizedVote;
+                    break;
+                case 13:
+                    type = InventoryItem.Type.MasterNodeQuarum;
+                    break;
+                case 14:
+                    type = InventoryItem.Type.MasterNodeAnnounce;
+                    break;
+                case 15:
+                    type = InventoryItem.Type.MasterNodePing;
+                    break;
+                case 16:
+                    type = InventoryItem.Type.DarkSendTransaction;
+                    break;
                 default:
-                    throw new ProtocolException("Unknown CInv type: " + typeCode);
+                    //throw new ProtocolException("Unknown CInv type: " + typeCode);
+                    type = InventoryItem.Type.None;
+                    break;
             }
             InventoryItem item = new InventoryItem(type, readHash());
             items.add(item);

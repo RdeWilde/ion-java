@@ -26,6 +26,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,8 @@ import java.util.Locale;
 
 import static org.bitcoinj.core.Coin.FIFTY_COINS;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
+
+//import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
 
 /**
  * <p>A block is a group of transactions, and is one of the fundamental data structures of the Bitcoin system.
@@ -68,7 +72,7 @@ public class Block extends Message {
      * upgrade everyone to change this, so Bitcoin can continue to grow. For now it exists as an anti-DoS measure to
      * avoid somebody creating a titanically huge but valid block and forcing everyone to download/store it forever.
      */
-    public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
+    public static final int MAX_BLOCK_SIZE = CoinDefinition.MAX_BLOCK_SIZE; //1 * 1000 * 1000;
     /**
      * A "sigop" is a signature verification operation. Because they're expensive we also impose a separate limit on
      * the number in a block to prevent somebody mining a huge block that has way more sigops than normal, so is very
@@ -112,10 +116,13 @@ public class Block extends Message {
 
     private transient boolean headerParsed;
     private transient boolean transactionsParsed;
+    private transient boolean masterNodeVotesParsed;
 
     private transient boolean headerBytesValid;
     private transient boolean transactionBytesValid;
-    
+    private transient boolean masterNodeVotesBytesValid;
+
+
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
     // of the size of the ideal encoding in addition to the actual message size (which Message needs)
@@ -196,7 +203,8 @@ public class Block extends Message {
      * </p>
      */
     public Coin getBlockInflation(int height) {
-        return FIFTY_COINS.shiftRight(height / params.getSubsidyDecreaseBlockCount());
+        //return Utils.toNanoCoins(50, 0).shiftRight(height / context.getSubsidyDecreaseBlockCount());
+        return /*Utils.toNanoCoins(*/CoinDefinition.GetBlockReward(height)/*, 0)*/;
     }
 
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
@@ -259,7 +267,18 @@ public class Block extends Message {
         // If this is a genuine lazy parse then length must have been provided to the constructor.
         transactionsParsed = true;
         transactionBytesValid = parseRetain;
+
+        //parseMasterNodeVotes();
     }
+
+    private static final long START_MASTERNODE_PAYMENTS_1 = 1401033600L; //Sun, 25 May 2014 16:00:00 GMT
+    private static final long START_MASTERNODE_PAYMENTS_STOP_1 = 1401134533L; // Mon, 26 May 2014 20:02:13 GMT
+
+    private static final long START_MASTERNODE_PAYMENTS = 1403728576L; //Fri, 20 Jun 2014 16:00:00 GMT
+    //private static final long START_MASTERNODE_PAYMENTS_STOP = ?
+
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET_1 = 1401757793;
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1403568776L;
 
     @Override
     void parse() throws ProtocolException {
@@ -290,6 +309,7 @@ public class Block extends Message {
             length = cursor - offset;
         } else {
             transactionBytesValid = !transactionsParsed || parseRetain && length > HEADER_SIZE;
+            masterNodeVotesBytesValid = !masterNodeVotesParsed || parseRetain && length > HEADER_SIZE;
         }
         headerBytesValid = !headerParsed || parseRetain && length >= HEADER_SIZE;
     }
@@ -327,6 +347,7 @@ public class Block extends Message {
             parseTransactions();
             if (!parseRetain) {
                 transactionBytesValid = false;
+                masterNodeVotesBytesValid = false;
                 if (headerParsed)
                     payload = null;
             }
@@ -336,6 +357,25 @@ public class Block extends Message {
                     e);
         }
     }
+
+    /*private void maybeParseMasterNodeVotes() {
+
+        if (masterNodeVotesParsed || bytes == null)
+            return;
+        try {
+            //maybeParseTransactions();
+            parseMasterNodeVotes();
+            if (!parseRetain) {
+                masterNodeVotesBytesValid = false;
+                if (headerParsed)
+                    bytes = null;
+            }
+        } catch (ProtocolException e) {
+            throw new LazyParseException(
+                    "ProtocolException caught during lazy parse.  For safe access to fields call ensureParsed before attempting read or write access",
+                    e);
+        }
+    }*/
 
     /**
      * Ensure the object is parsed if needed. This should be called in every getter before returning a value. If the
@@ -362,6 +402,7 @@ public class Block extends Message {
         try {
             maybeParseHeader();
             maybeParseTransactions();
+            //maybeParseMasterNodeVotes();
         } catch (LazyParseException e) {
             if (e.getCause() instanceof ProtocolException)
                 throw (ProtocolException) e.getCause();
@@ -408,7 +449,17 @@ public class Block extends Message {
             throw new ProtocolException(e);
         }
     }
-
+    /*
+    public void ensureParsedMasterNodeVotes() throws ProtocolException {
+        try {
+            maybeParseMasterNodeVotes();
+        } catch (LazyParseException e) {
+            if (e.getCause() instanceof ProtocolException)
+                throw (ProtocolException) e.getCause();
+            throw new ProtocolException(e);
+        }
+    }
+    */
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
@@ -445,6 +496,7 @@ public class Block extends Message {
                 tx.bitcoinSerialize(stream);
             }
         }
+        //writeMasterNodeVotes(stream);
     }
 
     /**
@@ -706,6 +758,30 @@ public class Block extends Message {
         return target;
     }
     
+    /** Returns true if the hash of the block is OK (lower than difficulty target). */
+    protected boolean checkProofOfWork(boolean throwException) throws VerificationException {
+        // This part is key - it is what proves the block was as difficult to make as it claims
+        // to be. Note however that in the context of this function, the block can claim to be
+        // as difficult as it wants to be .... if somebody was able to take control of our network
+        // connection and fork us onto a different chain, they could send us valid blocks with
+        // ridiculously easy difficulty and this function would accept them.
+        //
+        // To prevent this attack from being possible, elsewhere we check that the difficultyTarget
+        // field is of the right value. This requires us to have the preceeding blocks.
+        BigInteger target = getDifficultyTargetAsInteger();
+        BigInteger h = getHash().toBigInteger();
+
+        if (h.compareTo(target) > 0) {
+            // Proof of work check failed!
+            if (throwException)
+                throw new VerificationException("Hash is higher than target: " + getHashAsString() + " vs "
+                        + target.toString(16));
+            else
+                return false;
+        }
+        return true;
+    }
+
     private void checkTimestamp() throws VerificationException {
         maybeParseHeader();
         // Allow injection of a fake clock to allow unit testing.
@@ -880,7 +956,7 @@ public class Block extends Message {
     }
 
     /** Exists only for unit testing. */
-    void setMerkleRoot(Sha256Hash value) {
+    public void setMerkleRoot(Sha256Hash value) {
         unCacheHeader();
         merkleRoot = value;
         hash = null;
@@ -1229,4 +1305,17 @@ public class Block extends Message {
     public boolean isBIP65() {
         return version >= BLOCK_VERSION_BIP65;
     }
+
+    @VisibleForTesting
+    boolean isMasterNodeVotesBytesValid() {
+        return masterNodeVotesBytesValid;
+    }
+
+    boolean shouldHaveMasterNodeVotes() {
+        if(getParams().getId().equals(CoinDefinition.ID_MAINNET))
+            return (getTimeSeconds() > START_MASTERNODE_PAYMENTS/* && getTimeSeconds() < START_MASTERNODE_PAYMENTS_STOP*/);
+        else
+            return getTimeSeconds() > START_MASTERNODE_PAYMENTS_TESTNET;
+    }
+
 }

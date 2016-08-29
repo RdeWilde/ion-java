@@ -30,6 +30,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jcip.annotations.GuardedBy;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
+import org.darkcoinj.InstantXSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,6 +135,8 @@ public class Peer extends PeerSocketHandler {
     // to keep it pinned to the root set if they care about this data.
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final HashSet<TransactionConfidence> pendingTxDownloads = new HashSet<TransactionConfidence>();
+    // The lowest version number we're willing to accept. Lower than this will result in an immediate disconnect.
+    private volatile int vMinProtocolVersion = Pong.MIN_PROTOCOL_VERSION;
     // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
     // whilst waiting for the response. Is not used for downloads Peer generates itself.
     private static class GetDataRequest {
@@ -322,8 +329,26 @@ public class Peer extends PeerSocketHandler {
         return versionHandshakeFuture;
     }
 
+    static long startTime = 0;
+    static double dataReceived = 0f;
+    static long count = 1;
     @Override
     protected void processMessage(Message m) throws Exception {
+        if(startTime == 0)
+            startTime = Utils.currentTimeMillis();
+        else
+        {
+            long current = Utils.currentTimeMillis();
+            dataReceived += m.getMessageSize();
+
+            if(count % 50 == 0)
+            {
+                log.info("[bandwidth] " + (dataReceived / 1024 / 1024) + " MiB in " +(current-startTime)/1000 + " s:" + (dataReceived / 1024)/(current-startTime)*1000 + " KB/s");
+            }
+            count++;
+        }
+
+
         // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
         // returning null.
         for (ListenerRegistration<PeerEventListener> registration : eventListeners) {
@@ -356,11 +381,13 @@ public class Peer extends PeerSocketHandler {
             processInv((InventoryMessage) m);
         } else if (m instanceof Block) {
             processBlock((Block) m);
-        } 
-//        else if (m instanceof FilteredBlock) {
-//            startFilteredBlock((FilteredBlock) m);
-//        } 
-         else if (m instanceof Transaction) {
+        } /*else if (m instanceof FilteredBlock) {
+            startFilteredBlock((FilteredBlock) m);
+        }*/ else if (m instanceof TransactionLockRequest) {
+            //processTransactionLockRequest((TransactionLockRequest) m);
+            context.instantx.processTransactionLockRequest(this, (TransactionLockRequest)m);
+            processTransaction((TransactionLockRequest)m);
+        } else if (m instanceof Transaction) {
             processTransaction((Transaction) m);
         } else if (m instanceof GetDataMessage) {
             processGetData((GetDataMessage) m);
@@ -404,7 +431,29 @@ public class Peer extends PeerSocketHandler {
             processUTXOMessage((UTXOsMessage) m);
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
-        } else {
+        } else if(m instanceof DarkSendQueue) {
+            //do nothing
+        } else if(m instanceof MasternodeBroadcast) {
+            if(!context.isLiteMode())
+                context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);
+
+        }
+        else if(m instanceof MasternodePing) {
+            if(!context.isLiteMode())
+                context.masternodeManager.processMasternodePing(this, (MasternodePing)m);
+        }
+        else if(m instanceof SporkMessage)
+        {
+            context.sporkManager.processSpork(this, (SporkMessage)m);
+        }
+        else if(m instanceof ConsensusVote) {
+            context.instantx.processConsensusVoteMessage(this, (ConsensusVote)m);
+        }
+        else if(m instanceof SyncStatusCount) {
+            context.masternodeSync.processSyncStatusCount(this, (SyncStatusCount)m);
+        }
+        else
+        {
             log.warn("{}: Received unhandled message: {}", this, m);
         }
     }
@@ -437,6 +486,8 @@ public class Peer extends PeerSocketHandler {
             throw new ProtocolException("Got two version messages from peer");
         vPeerVersionMessage = m;
         // Switch to the new protocol version.
+        int peerVersion = vPeerVersionMessage.clientVersion;
+        PeerAddress peerAddress = getAddress();
         long peerTime = vPeerVersionMessage.time * 1000;
         log.info("{}: Got version={}, subVer='{}', services=0x{}, time={}, blocks={}",
                 this,
@@ -662,6 +713,11 @@ public class Peer extends PeerSocketHandler {
                                     try {
                                         log.info("{}: Dependency download complete!", getAddress());
                                         wallet.receivePending(tx, dependencies);
+
+                                        if(tx instanceof TransactionLockRequest)
+                                        {
+                                            context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                                        }
                                     } catch (VerificationException e) {
                                         log.error("{}: Wallet failed to process pending transaction {}", getAddress(), tx.getHash());
                                         log.error("Error was: ", e);
@@ -678,6 +734,11 @@ public class Peer extends PeerSocketHandler {
                             });
                         } else {
                             wallet.receivePending(tx, null);
+
+                            if(tx instanceof TransactionLockRequest)
+                            {
+                                context.instantx.processTransactionLockRequestAccepted((TransactionLockRequest)tx);
+                            }
                         }
                     }
                 } catch (VerificationException e) {
@@ -911,23 +972,118 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
+    //added for dash
+    boolean alreadyHave(InventoryItem inv)
+    {
+        switch (inv.type)
+        {
+//            case MSG_DSTX:
+  //              return mapDarksendBroadcastTxes.count(inv.hash);
+            case TransactionLockRequest:
+                return context.instantx.mapTxLockReq.containsKey(inv.hash) ||
+                        context.instantx.mapTxLockReqRejected.containsKey(inv.hash);
+            case TransactionLockVote:
+                return  context.instantx.mapTxLockVote.containsKey(inv.hash);
+            case Spork:
+                return context.sporkManager.mapSporks.containsKey(inv.hash);
+            case MasterNodeWinner:
+                /*if(context.masternodePayments.mapMasternodePayeeVotes.containsKey(inv.hash)) {
+                    context.masternodeSync.AddedMasternodeWinner(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetVote:
+                /*if(budget.mapSeenMasternodeBudgetVotes.containsKey(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetProposal:
+               /*if(budget.mapSeenMasternodeBudgetProposals.containsKey(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetFinalizedVote:
+                /*if(budget.mapSeenFinalizedBudgetVotes.count(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case BudgetFinalized:
+                /*if(budget.mapSeenFinalizedBudgets.count(inv.hash)) {
+                    masternodeSync.AddedBudgetItem(inv.hash);
+                    return true;
+                }*/
+                return false;
+            case MasterNodeAnnounce:
+                if(context.masternodeManager.mapSeenMasternodeBroadcast.containsKey(inv.hash)) {
+                    context.masternodeSync.addedMasternodeList(inv.hash);
+                    return true;
+                }
+                return false;
+            case MasterNodePing:
+                return context.masternodeManager.mapSeenMasternodePing.containsKey(inv.hash);
+        }
+        // Don't know what it is, just say we already got one
+        return true;
+    }
+
     private void processInv(InventoryMessage inv) {
         List<InventoryItem> items = inv.getItems();
 
         // Separate out the blocks and transactions, we'll handle them differently
         List<InventoryItem> transactions = new LinkedList<InventoryItem>();
         List<InventoryItem> blocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> instantxLockRequests = new LinkedList<InventoryItem>();
+        List<InventoryItem> instantxLocks = new LinkedList<InventoryItem>();
+        List<InventoryItem> masternodePings = new LinkedList<InventoryItem>();
+        List<InventoryItem> masternodeBroadcasts = new LinkedList<InventoryItem>();
+        List<InventoryItem> sporks = new LinkedList<InventoryItem>();
+
+        //InstantXSystem instantx = InstantXSystem.get(blockChain);
 
         for (InventoryItem item : items) {
             switch (item.type) {
                 case Transaction:
                     transactions.add(item);
                     break;
+                case TransactionLockRequest:
+                    //if(instantx.isEnabled())
+                        instantxLockRequests.add(item);
+                    //transactions.add(item);
+                    break;
                 case Block:
                     blocks.add(item);
                     break;
+                case TransactionLockVote:
+                    //if(instantx.isEnabled())
+                        instantxLocks.add(item);
+                    break;
+                case Spork:
+                    sporks.add(item);
+                    break;
+                case MasterNodeWinner:
+                    break;
+                case MasterNodeScanningError: break;
+                case BudgetVote: break;
+                case    BudgetProposal: break;
+                case    BudgetFinalized: break;
+                case    BudgetFinalizedVote: break;
+                case    MasterNodeQuarum: break;
+                case    MasterNodeAnnounce:
+                    if(context.isLiteMode()) break;
+                    masternodeBroadcasts.add(item);
+                    break;
+                case    MasterNodePing:
+                    if(context.isLiteMode()) break;
+                    masternodePings.add(item);
+                    break;
+                case DarkSendTransaction:
+                    break;
                 default:
-                    throw new IllegalStateException("Not implemented: " + item.type);
+                    break;
+                    //throw new IllegalStateException("Not implemented: " + item.type);
             }
         }
 
@@ -973,6 +1129,87 @@ public class Peer extends PeerSocketHandler {
                 // Register with the garbage collector that we care about the confidence data for a while.
                 pendingTxDownloads.add(conf);
             }
+        }
+
+        it = instantxLockRequests.iterator();
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+            // Only download the transaction if we are the first peer that saw it be advertised. Other peers will also
+            // see it be advertised in inv packets asynchronously, they co-ordinate via the memory pool. We could
+            // potentially download transactions faster by always asking every peer for a tx when advertised, as remote
+            // peers run at different speeds. However to conserve bandwidth on mobile devices we try to only download a
+            // transaction once. This means we can miss broadcasts if the peer disconnects between sending us an inv and
+            // sending us the transaction: currently we'll never try to re-fetch after a timeout.
+            //
+            // The line below can trigger confidence listeners.
+            TransactionConfidence conf = context.getConfidenceTable().seen(item.hash, this.getAddress());
+            if (conf.numBroadcastPeers() > 1) {
+                // Some other peer already announced this so don't download.
+                it.remove();
+            } else if (conf.getSource().equals(TransactionConfidence.Source.SELF)) {
+                // We created this transaction ourselves, so don't download.
+                it.remove();
+            } else {
+                log.debug("{}: getdata on tx {}", getAddress(), item.hash);
+                getdata.addItem(item);
+                // Register with the garbage collector that we care about the confidence data for a while.
+                pendingTxDownloads.add(conf);
+            }
+        }
+
+
+
+        it = instantxLocks.iterator();
+        //InstantXSystem instantx = InstantXSystem.get(blockChain);
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+
+//            if(!instantx.mapTxLockVote.containsKey(item.hash))
+            {
+                getdata.addItem(item);
+            }
+        }
+
+        //masternodepings
+
+        //if(blockChain.getBestChainHeight() > (this.getBestHeight() - 100))
+        {
+
+           //if(context.masternodeSync.isSynced()) {
+                it = masternodePings.iterator();
+
+                while (it.hasNext()) {
+                    InventoryItem item = it.next();
+                    if (!context.masternodeManager.mapSeenMasternodePing.containsKey(item.hash)) {
+                        //log.info("inv - received MasternodePing :" + item.hash + " new ping");
+                        getdata.addItem(item);
+                    } //else
+                        //log.info("inv - received MasternodePing :" + item.hash + " already seen");
+                }
+           // }
+
+            it = masternodeBroadcasts.iterator();
+
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                //log.info("inv - received MasternodeBroadcast :" + item.hash);
+
+                //if(!instantx.mapTxLockVote.containsKey(item.hash))
+                //{
+                if(!alreadyHave(item))
+                    getdata.addItem(item);
+                //}
+            }
+        }
+        it = sporks.iterator();
+
+        while (it.hasNext()) {
+            InventoryItem item = it.next();
+
+            //if(!instantx.mapTxLockVote.containsKey(item.hash))
+            //{
+            getdata.addItem(item);
+            //}
         }
 
         // If we are requesting filteredblocks we have to send a ping after the getdata so that we have a clear
@@ -1567,4 +1804,51 @@ public class Peer extends PeerSocketHandler {
     public void setDownloadTxDependencies(boolean value) {
         vDownloadTxDependencies = value;
     }
+
+    //Dash Specific Code
+    public void notifyLock(Transaction tx)
+    {
+        for(Wallet wallet : wallets)
+        {
+            if(wallet.isTransactionRelevant(tx)){
+                wallet.receiveLock(tx);
+            }
+        }
+    }
+    ArrayList<String> vecRequestsFulfilled = new ArrayList<String>();
+
+    boolean hasFulfilledRequest(String strRequest)
+    {
+        //BOOST_FOREACH(std::string& type, vecRequestsFulfilled)
+        for(String type: vecRequestsFulfilled)
+        {
+            if(type.equals(strRequest)) return true;
+        }
+        return false;
+    }
+
+    void clearFulfilledRequest(String strRequest)
+    {
+        //std::vector<std::string>::iterator it = vecRequestsFulfilled.begin();
+        Iterator<String> it = vecRequestsFulfilled.iterator();
+        while(it.hasNext()){
+            if(it.next().equals(strRequest)) {
+                it.remove();
+                return;
+            }
+        }
+    }
+
+    void fulfilledRequest(String strRequest)
+    {
+        if(hasFulfilledRequest(strRequest)) return;
+        vecRequestsFulfilled.add(strRequest);
+    }
+
+    boolean fDarkSendMaster = false;
+    public boolean isDarkSendMaster() { return fDarkSendMaster; }
+
+    int masternodeListCount = -1;
+    public int getMasternodeListCount() { return masternodeListCount; }
+    public void setMasternodeListCount(int count) { masternodeListCount = count; }
 }

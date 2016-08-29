@@ -72,6 +72,21 @@ public class BitcoinSerializer {
         names.put(RejectMessage.class, "reject");
         names.put(GetUTXOsMessage.class, "getutxos");
         names.put(UTXOsMessage.class, "utxos");
+
+        //Dash specific messages
+        names.put(DarkSendElectionEntryPingMessage.class, "dseep");
+
+        names.put(TransactionLockRequest.class, "ix");
+        names.put(ConsensusVote.class, "txlvote");
+
+        names.put(MasternodeBroadcast.class, "mnb");
+        names.put(MasternodePing.class, "mnp");
+        names.put(SporkMessage.class, "spork");
+        names.put(GetSporksMessage.class, "getsporks");
+        names.put(DarkSendEntryGetMessage.class, "dseg");
+        names.put(SyncStatusCount.class, "ssc");
+
+
     }
 
     /**
@@ -202,10 +217,10 @@ public class BitcoinSerializer {
             message = new InventoryMessage(params, payloadBytes, parseLazy, parseRetain, length);
         } else if (command.equals("block")) {
             message = new Block(params, payloadBytes, parseLazy, parseRetain, length);
-        } 
+        }
 //        else if (command.equals("merkleblock")) {
 //            message = new FilteredBlock(params, payloadBytes);
-//        } 
+//        }
         else if (command.equals("getdata")) {
             message = new GetDataMessage(params, payloadBytes, parseLazy, parseRetain, length);
         } else if (command.equals("getblocks")) {
@@ -241,7 +256,24 @@ public class BitcoinSerializer {
             return new UTXOsMessage(params, payloadBytes);
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
-        } else {
+        } else if (command.equals("dseep")) {
+            return new DarkSendElectionEntryPingMessage(params, payloadBytes);
+        } else if (command.equals("ix")) {
+            return new TransactionLockRequest(params, payloadBytes);
+        } else if (command.equals("txlvote")) {
+            return new ConsensusVote(params, payloadBytes);
+        } else if (command.equals("dsq")) {
+            return new DarkSendQueue(params, payloadBytes);
+        } else if (command.equals("mnb")) {
+            return new MasternodeBroadcast(params, payloadBytes);
+        } else if( command.equals("mnp")) {
+            return new MasternodePing(params, payloadBytes);
+        } else if (command.equals("spork")) {
+            return new SporkMessage(params, payloadBytes, 0);
+        } else if(command.equals("ssc")) {
+            return new SyncStatusCount(params, payloadBytes);
+        }
+        else{
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }

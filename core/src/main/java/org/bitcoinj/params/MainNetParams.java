@@ -17,6 +17,7 @@
 
 package org.bitcoinj.params;
 
+import com.google.common.io.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.*;
 import org.blackcoinj.pos.BlackcoinMagic;
@@ -47,24 +48,16 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         genesisBlock.setTime(BlackcoinMagic.time);
         genesisBlock.setNonce(BlackcoinMagic.nonce);
         id = ID_MAINNET;
-        subsidyDecreaseBlockCount = 210000;
+        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         spendableCoinbaseDepth = BlackcoinMagic.spendableCoinbaseDepth;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(BlackcoinMagic.checkpoint0),
+        checkState(genesisHash.equals(CoinDefinition.genesisHash), // TODO Sha256Hase(checkpoints[0]) ?
                 genesisHash);
 
-        // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
-        // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
-        // extraNonce and the same outputs but appeared at different heights, and greatly complicated re-org handling.
-        // Having these here simplifies block connection logic considerably.
-        checkpoints.put(872456, Sha256Hash.wrap(BlackcoinMagic.checkpoint1));
+        CoinDefinition.initCheckpoints(checkpoints);
 
-        dnsSeeds = new String[] {
-        		BlackcoinMagic.dnsSeed0,       
-        		BlackcoinMagic.dnsSeed1,  
-        		BlackcoinMagic.dnsSeed2,
-        		BlackcoinMagic.dnsSeed3
-        };
+        dnsSeeds = CoinDefinition.dnsSeeds;
+
 //        httpSeeds = new HttpDiscovery.Details[] {
 //                // Mike Hearn
 //                new HttpDiscovery.Details(
@@ -120,6 +113,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 //                0x0f097059, 0x69ac957c, 0x366d8453, 0xb1ba2844, 0x8857f081, 0x70b5be63, 0xc545454b, 0xaf36ded1,
 //                0xb5a4b052, 0x21f062d1, 0x72ab89b2, 0x74a45318, 0x8312e6bc, 0xb916965f, 0x8aa7c858, 0xfe7effad,
 //        };
+        strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
     }
 
     private static MainNetParams instance;

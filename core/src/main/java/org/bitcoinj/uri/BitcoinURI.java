@@ -98,7 +98,7 @@ public class BitcoinURI {
      * from network parameters.
      */
     @Deprecated
-    public static final String BITCOIN_SCHEME = "bitcoin";
+    public static final String BITCOIN_SCHEME = CoinDefinition.coinURIScheme;
     private static final String ENCODED_SPACE_CHARACTER = "%20";
     private static final String AMPERSAND_SEPARATOR = "&";
     private static final String QUESTION_MARK_SEPARATOR = "?";
@@ -166,7 +166,7 @@ public class BitcoinURI {
         // Split off the address from the rest of the query parameters.
         String[] addressSplitTokens = schemeSpecificPart.split("\\?", 2);
         if (addressSplitTokens.length == 0)
-            throw new BitcoinURIParseException("No data found after the bitcoin: prefix");
+            throw new BitcoinURIParseException("No data found after the "+CoinDefinition.coinName +": prefix");
         String addressToken = addressSplitTokens[0];  // may be empty!
 
         String[] nameValuePairTokens;
@@ -206,7 +206,8 @@ public class BitcoinURI {
         for (String nameValuePairToken : nameValuePairTokens) {
             final int sepIndex = nameValuePairToken.indexOf('=');
             if (sepIndex == -1)
-                throw new BitcoinURIParseException("Malformed Bitcoin URI - no separator in '" +
+                throw new BitcoinURIParseException("Malformed "+CoinDefinition.coinName+" URI - no separator in '" +
+
                         nameValuePairToken + "'");
             if (sepIndex == 0)
                 throw new BitcoinURIParseException("Malformed Bitcoin URI - empty name '" +

@@ -1,5 +1,9 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.store.MasternodeDB;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.darkcoinj.DarkSendPool;
+import org.darkcoinj.InstantXSystem;
 import org.slf4j.*;
 
 import static com.google.common.base.Preconditions.*;
@@ -30,6 +34,19 @@ public class Context {
     private TxConfidenceTable confidenceTable;
     private NetworkParameters params;
     private int eventHorizon = 100;
+
+    //Dash Specific
+    private boolean liteMode = true;
+    private boolean allowInstantX = true; //allow InstantX in litemode
+    public PeerGroup peerGroup;
+    public SporkManager sporkManager;
+    public MasternodeManager masternodeManager;
+    public MasternodePayments masternodePayments;
+    public MasternodeSync masternodeSync;
+    public ActiveMasternode activeMasternode;
+    public DarkSendPool darkSendPool;
+    public InstantXSystem instantx;
+    public MasternodeDB masternodeDB;
 
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
@@ -139,5 +156,70 @@ public class Context {
      */
     public int getEventHorizon() {
         return eventHorizon;
+    }
+
+    //
+    // Dash Specific
+    //
+
+    public void initDash(boolean liteMode, boolean allowInstantX) {
+        this.liteMode = liteMode;
+        this.allowInstantX = allowInstantX;
+
+        //Dash Specific
+        sporkManager = new SporkManager(this);
+
+        masternodePayments = new MasternodePayments(this);
+        masternodeSync = new MasternodeSync(this);
+        activeMasternode = new ActiveMasternode(this);
+        darkSendPool = new DarkSendPool(this);
+        instantx = new InstantXSystem(this);
+        masternodeManager = new MasternodeManager(this);
+    }
+
+    public void initDashSync(String directory)
+    {
+        masternodeDB = new MasternodeDB(directory);
+
+        MasternodeManager masternodeManagerLoaded = masternodeDB.read(this, false);
+
+        //
+        // If loading was successful, replace the default manager
+        //
+        if(masternodeManagerLoaded != null) {
+            masternodeManager = masternodeManagerLoaded;
+            masternodeManager.setBlockChain(sporkManager.blockChain);
+        }
+
+        //other functions
+        darkSendPool.startBackgroundProcessing();
+    }
+
+    public void setPeerGroupAndBlockChain(PeerGroup peerGroup, AbstractBlockChain chain)
+    {
+        this.peerGroup = peerGroup;
+        sporkManager.setBlockChain(chain);
+        masternodeManager.setBlockChain(chain);
+        masternodeSync.setBlockChain(chain);
+        instantx.setBlockChain(chain);
+    }
+
+    public boolean isLiteMode() { return liteMode; }
+    public void setLiteMode(boolean liteMode)
+    {
+        boolean current = this.liteMode;
+        if(current == liteMode)
+            return;
+
+        this.liteMode = liteMode;
+        if(liteMode == false)
+        {
+            darkSendPool.startBackgroundProcessing();
+        }
+    }
+    public boolean allowInstantXinLiteMode() { return allowInstantX; }
+    public void setAllowInstantXinLiteMode(boolean allow)
+    {
+        this.allowInstantX = allow;
     }
 }

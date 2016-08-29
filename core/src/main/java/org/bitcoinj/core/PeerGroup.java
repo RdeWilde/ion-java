@@ -86,6 +86,8 @@ public class PeerGroup implements TransactionBroadcaster {
 
     protected final ReentrantLock lock = Threading.lock("peergroup");
 
+    public ReentrantLock getLock() { return lock; }  //for dash
+
     private final NetworkParameters params;
     @Nullable private final AbstractBlockChain chain;
 
@@ -161,7 +163,8 @@ public class PeerGroup implements TransactionBroadcaster {
 //        }
     };
 
-    private int minBroadcastConnections = 0;
+
+    private int minBroadcastConnections = CoinDefinition.minBroadcastConnections;
     private final AbstractWalletEventListener walletEventListener = new AbstractWalletEventListener() {
         @Override public void onScriptsChanged(Wallet wallet, List<Script> scripts, boolean isAddingScripts) {
             //recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
@@ -407,6 +410,7 @@ public class PeerGroup implements TransactionBroadcaster {
         runningBroadcasts = Collections.synchronizedSet(new HashSet<TransactionBroadcast>());
         runningBroadcasts2 = Collections.synchronizedSet(new HashSet<BlockBroadcast>());
 //        bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
+        context.setPeerGroupAndBlockChain(this, chain);
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
