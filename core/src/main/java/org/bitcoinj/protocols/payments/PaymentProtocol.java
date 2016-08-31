@@ -198,7 +198,7 @@ public class PaymentProtocol {
             // Now verify the certificate chain is correct and trusted. This let's us get an identity linked pubkey.
             CertPathValidator validator = CertPathValidator.getInstance("PKIX");
             PKIXCertPathValidatorResult result = (PKIXCertPathValidatorResult) validator.validate(path, params);
-            PublicKey publicKey = result.getPublicKey();
+            java.security.PublicKey publicKey = result.getPublicKey();
             // OK, we got an identity, now check it was used to sign this message.
             Signature signature = Signature.getInstance(algorithm);
             // Note that we don't use signature.initVerify(certs.get(0)) here despite it being the most obvious
@@ -251,13 +251,13 @@ public class PaymentProtocol {
         /** Display name of the payment requestor, could be a domain name, email address, legal name, etc */
         public final String displayName;
         /** SSL public key that was used to sign. */
-        public final PublicKey merchantSigningKey;
+        public final java.security.PublicKey merchantSigningKey;
         /** Object representing the CA that verified the merchant's ID */
         public final TrustAnchor rootAuthority;
         /** String representing the display name of the CA that verified the merchant's ID */
         public final String rootAuthorityName;
 
-        private PkiVerificationData(@Nullable String displayName, PublicKey merchantSigningKey,
+        private PkiVerificationData(@Nullable String displayName, java.security.PublicKey merchantSigningKey,
                                     TrustAnchor rootAuthority) throws PaymentProtocolException.PkiVerificationException {
             try {
                 this.displayName = displayName;

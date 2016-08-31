@@ -24,7 +24,6 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.WalletTransaction.Pool;
-import org.blackcoinj.pos.BlackcoinMagic;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
@@ -92,14 +91,14 @@ public class Transaction extends ChildMessage implements Serializable {
     /**
      * If fee is lower than this value (in satoshis), a default reference client will treat it as if there were no fee.
      */
-    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(BlackcoinMagic.minTxFee);
+    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(CoinDefinition.minTxFee);
 
     /**
      * Any standard (ie pay-to-address) output smaller than this value (in satoshis) will most likely be rejected by the network.
      * This is calculated by assuming a standard output will be 34 bytes, and then using the formula used in
      * {@link TransactionOutput#getMinNonDustValue(Coin)}.
      */
-    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(BlackcoinMagic.dust); // ratoshis
+    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(CoinDefinition.dust); // ratoshis
 
     // These are serialized in both bitcoin and java serialization.
     private long version;

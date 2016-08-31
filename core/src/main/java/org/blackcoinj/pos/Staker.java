@@ -9,28 +9,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.bitcoinj.core.AbstractBlockChain;
-import org.bitcoinj.core.AbstractBlockChainListener;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptChunk;
@@ -126,7 +108,7 @@ public class Staker extends AbstractExecutionThreadService {
 		Transaction coinstakeTx = initCoinstakeTx();
 		
 		while (!stopStaking && isPastLasTime(prevBlock, coinstakeTx)) {
-			Thread.sleep(BlackcoinMagic.minerMiliSleep);
+			Thread.sleep(CoinDefinition.minerMiliSleep);
 			prevBlock = chain.getChainHead();
 			coinstakeTx = initCoinstakeTx();
 		}
@@ -138,7 +120,7 @@ public class Staker extends AbstractExecutionThreadService {
 
 		while (!stopStaking && !newBestBlockArrived) {
 			doStake(prevBlock, coinstakeTx);
-			Thread.sleep(BlackcoinMagic.minerMiliSleep);
+			Thread.sleep(CoinDefinition.minerMiliSleep);
 			coinstakeTx = initCoinstakeTx();
 			if (isPastLasTime(prevBlock, coinstakeTx))
 				break;
@@ -151,17 +133,17 @@ public class Staker extends AbstractExecutionThreadService {
 	}
 
 	private boolean isFutureTime(Transaction coinstakeTx) {
-		return coinstakeTx.getnTime() > Utils.currentTimeSeconds() + BlackcoinMagic.futureDrift;
+		return coinstakeTx.getnTime() > Utils.currentTimeSeconds() + CoinDefinition.futureDrift;
 	}
 
 	private boolean isPastLasTime(StoredBlock prevBlock, Transaction coinstakeTx) {
-		return coinstakeTx.getnTime() <= prevBlock.getHeader().getTimeSeconds() + BlackcoinMagic.futureDrift;
+		return coinstakeTx.getnTime() <= prevBlock.getHeader().getTimeSeconds() + CoinDefinition.futureDrift;
 	}
 
 	private Transaction initCoinstakeTx() {
 		Transaction coinstakeTx = new Transaction(params);
 		// apply black magic https://en.wikipedia.org/wiki/Bitwise_operation#Mathematical_equivalents
-		coinstakeTx.setnTime(coinstakeTx.getnTime() & ~BlackcoinMagic.STAKE_TIMESTAMP_MASK);
+		coinstakeTx.setnTime(coinstakeTx.getnTime() & ~CoinDefinition.stakeTimestampMask);
 		// Mark coin stake transaction
 		coinstakeTx.addOutput(new TransactionOutput(params, null, Coin.ZERO, new byte[0]));
 		return coinstakeTx;
@@ -234,7 +216,7 @@ public class Staker extends AbstractExecutionThreadService {
 				Transaction coinbaseTransaction = createCoinbaseTx(prevBlock);
 				coinbaseTransaction.setnTime(coinstakeTx.getnTime());
 				
-				Block newBlock = new Block(params, BlackcoinMagic.blockVersion, prevBlock.getHeader().getHash(),
+				Block newBlock = new Block(params, CoinDefinition.blockVersion, prevBlock.getHeader().getHash(),
 						coinstakeTx.getnTime(), difficultyTarget);
 				newBlock.addTransaction(coinbaseTransaction);
 				newBlock.addTransaction(coinstakeTx);

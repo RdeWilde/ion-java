@@ -17,12 +17,7 @@
 
 package org.bitcoinj.params;
 
-import com.google.common.io.*;
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.*;
-import org.blackcoinj.pos.BlackcoinMagic;
-
-import java.net.*;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -34,22 +29,22 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         super();
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = BlackcoinMagic.proofOfWorkLimit;
-        dumpedPrivateKeyHeader = BlackcoinMagic.bulgarianConst + BlackcoinMagic.addressHeader;
-        addressHeader = BlackcoinMagic.addressHeader;
-        p2shHeader = BlackcoinMagic.p2shHeader;
+        maxTarget = CoinDefinition.proofOfWorkLimit;
+        dumpedPrivateKeyHeader = CoinDefinition.bulgarianConst + CoinDefinition.addressHeader;
+        addressHeader = CoinDefinition.addressHeader;
+        p2shHeader = CoinDefinition.p2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        port = BlackcoinMagic.port;
-        packetMagic = BlackcoinMagic.packetMagic;
-        bip32HeaderPub = BlackcoinMagic.bcpv; //The 4 byte header that serializes in base58 to "bcpv".
-        bip32HeaderPriv = BlackcoinMagic.bcpb; //The 4 byte header that serializes in base58 to "bcpb"
+        port = CoinDefinition.port;
+        packetMagic = CoinDefinition.packetMagic;
+        bip32HeaderPub = CoinDefinition.ionv; //The 4 byte header that serializes in base58 to "ionv".
+        bip32HeaderPriv = CoinDefinition.ionp; //The 4 byte header that serializes in base58 to "ionp"
 
-        genesisBlock.setDifficultyTarget(BlackcoinMagic.genesisDifficultyTarget);
-        genesisBlock.setTime(BlackcoinMagic.time);
-        genesisBlock.setNonce(BlackcoinMagic.nonce);
+        genesisBlock.setDifficultyTarget(CoinDefinition.genesisDifficultyTarget);
+        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
+        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
         id = ID_MAINNET;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
-        spendableCoinbaseDepth = BlackcoinMagic.spendableCoinbaseDepth;
+        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals(CoinDefinition.genesisHash), // TODO Sha256Hase(checkpoints[0]) ?
                 genesisHash);

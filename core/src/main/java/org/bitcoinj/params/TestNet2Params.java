@@ -17,7 +17,6 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.CoinDefinition;
-import org.bitcoinj.core.Utils;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -31,7 +30,7 @@ public class TestNet2Params extends AbstractBitcoinNetParams {
         id = ID_TESTNET;
         packetMagic = 0xfabfb5daL;
 
-        port = CoinDefinition.TestPort;
+        port = CoinDefinition.testPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };

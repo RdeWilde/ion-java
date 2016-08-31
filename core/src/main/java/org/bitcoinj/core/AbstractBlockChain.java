@@ -958,10 +958,10 @@ public abstract class AbstractBlockChain {
         if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
             double SmartAverage = (((nBlockTimeAverage)*0.7)+((nBlockTimeSum2 / nBlockTimeCount2)*0.3));
             if(SmartAverage < 1) SmartAverage = 1;
-            double Shift = CoinDefinition.TARGET_SPACING/SmartAverage;
+            double Shift = CoinDefinition.targetSpacing /SmartAverage;
 
-            long nActualTimespan = (long)((CountBlocks*CoinDefinition.TARGET_SPACING)/Shift);
-            long nTargetTimespan = (CountBlocks*CoinDefinition.TARGET_SPACING);
+            long nActualTimespan = (long)((CountBlocks*CoinDefinition.targetSpacing)/Shift);
+            long nTargetTimespan = (CountBlocks*CoinDefinition.targetSpacing);
             if (nActualTimespan < nTargetTimespan/3)
                 nActualTimespan = nTargetTimespan/3;
             if (nActualTimespan > nTargetTimespan*3)
@@ -1055,10 +1055,10 @@ public abstract class AbstractBlockChain {
         if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
             double SmartAverage = ((((double)nBlockTimeAverage)*0.7)+(((double)nBlockTimeSum2 / (double)nBlockTimeCount2)*0.3));
             if(SmartAverage < 1) SmartAverage = 1;
-            double Shift = CoinDefinition.TARGET_SPACING/SmartAverage;
+            double Shift = CoinDefinition.targetSpacing /SmartAverage;
 
-            double fActualTimespan = (((double)CountBlocks*(double)CoinDefinition.TARGET_SPACING)/Shift);
-            double fTargetTimespan = ((double)CountBlocks*CoinDefinition.TARGET_SPACING);
+            double fActualTimespan = (((double)CountBlocks*(double)CoinDefinition.targetSpacing)/Shift);
+            double fTargetTimespan = ((double)CountBlocks*CoinDefinition.targetSpacing);
             if (fActualTimespan < fTargetTimespan/3)
                 fActualTimespan = fTargetTimespan/3;
             if (fActualTimespan > fTargetTimespan*3)

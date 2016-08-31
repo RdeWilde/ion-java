@@ -5,18 +5,9 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
 
+import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UnsafeByteArrayOutputStream;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 
@@ -79,9 +70,9 @@ public class BlackcoinPOS {
 		if (stakeTxTime < txPrev.getTxTime())
 			throw new VerificationException("Time violation");
 		// https://github.com/rat4/blackcoin/blob/e1b26651752c2a90e8cc42005e27bae7e1544622/src/kernel.cpp#L435
-		if (stakeTxTime > BlackcoinMagic.txTimeProtocolV3) {
+		if (stakeTxTime > CoinDefinition.txTimeProtocolV3) {
 			int nDepth = 0;
-			if (IsConfirmedInNPrevBlocks(txPrev, storedPrev, BlackcoinMagic.stakeMinConfirmations - 1, nDepth))
+			if (IsConfirmedInNPrevBlocks(txPrev, storedPrev, CoinDefinition.stakeMinConfirmations - 1, nDepth))
 				throw new VerificationException(
 						"CheckProofOfStake() : tried to stake at depth " + String.valueOf(nDepth + 1));
 
@@ -105,7 +96,7 @@ public class BlackcoinPOS {
 		Utils.uint64ToByteArrayLE(stakeModifier, arStakeMod, 0);
 		ByteArrayOutputStream ssStakeStream;
 		try {
-			if (stakeTxTime > BlackcoinMagic.txTimeProtocolV3) {
+			if (stakeTxTime > CoinDefinition.txTimeProtocolV3) {
 				ssStakeStream = new UnsafeByteArrayOutputStream(32 + 4 + 32 + 4 + 4);
 				// ss << bnStakeModifierV2;
 				ssStakeStream.write(Utils.reverseBytes(stakeModifier2.getBytes()));

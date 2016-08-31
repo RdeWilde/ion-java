@@ -6578,6 +6578,16 @@ public final class Protos {
      * <code>optional .wallet.TransactionConfidence.Source source = 7;</code>
      */
     org.bitcoinj.wallet.Protos.TransactionConfidence.Source getSource();
+
+    // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
+    /**
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     */
+    boolean hasIxType();
+    /**
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     */
+    org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType();
   }
   /**
    * Protobuf type {@code wallet.TransactionConfidence}
@@ -6680,6 +6690,17 @@ public final class Protos {
               } else {
                 bitField0_ |= 0x00000010;
                 source_ = value;
+              }
+              break;
+            }
+            case 64: {
+              int rawValue = input.readEnum();
+              org.bitcoinj.wallet.Protos.TransactionConfidence.IXType value = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(8, rawValue);
+              } else {
+                bitField0_ |= 0x00000020;
+                ixType_ = value;
               }
               break;
             }
@@ -6985,6 +7006,97 @@ public final class Protos {
       // @@protoc_insertion_point(enum_scope:wallet.TransactionConfidence.Source)
     }
 
+    /**
+     * Protobuf enum {@code wallet.TransactionConfidence.IXType}
+     */
+    public enum IXType
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>IX_NONE = 0;</code>
+       */
+      IX_NONE(0, 0),
+      /**
+       * <code>IX_REQUEST = 1;</code>
+       */
+      IX_REQUEST(1, 1),
+      /**
+       * <code>IX_LOCKED = 2;</code>
+       */
+      IX_LOCKED(2, 2),
+      ;
+
+      /**
+       * <code>IX_NONE = 0;</code>
+       */
+      public static final int IX_NONE_VALUE = 0;
+      /**
+       * <code>IX_REQUEST = 1;</code>
+       */
+      public static final int IX_REQUEST_VALUE = 1;
+      /**
+       * <code>IX_LOCKED = 2;</code>
+       */
+      public static final int IX_LOCKED_VALUE = 2;
+
+
+      public final int getNumber() { return value; }
+
+      public static IXType valueOf(int value) {
+        switch (value) {
+          case 0: return IX_NONE;
+          case 1: return IX_REQUEST;
+          case 2: return IX_LOCKED;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<IXType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<IXType>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<IXType>() {
+              public IXType findValueByNumber(int number) {
+                return IXType.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.bitcoinj.wallet.Protos.TransactionConfidence.getDescriptor().getEnumTypes().get(2);
+      }
+
+      private static final IXType[] VALUES = values();
+
+      public static IXType valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private IXType(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:wallet.TransactionConfidence.IXType)
+    }
+
     private int bitField0_;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.bitcoinj.wallet.Protos.TransactionConfidence.Type type_;
@@ -7134,6 +7246,22 @@ public final class Protos {
       return source_;
     }
 
+    // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
+    public static final int IXTYPE_FIELD_NUMBER = 8;
+    private org.bitcoinj.wallet.Protos.TransactionConfidence.IXType ixType_;
+    /**
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     */
+    public boolean hasIxType() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+     */
+    public org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType() {
+      return ixType_;
+    }
+
     private void initFields() {
       type_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Type.UNKNOWN;
       appearedAtHeight_ = 0;
@@ -7141,6 +7269,7 @@ public final class Protos {
       depth_ = 0;
       broadcastBy_ = java.util.Collections.emptyList();
       source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
+      ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7179,6 +7308,9 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeEnum(7, source_.getNumber());
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeEnum(8, ixType_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -7211,6 +7343,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(7, source_.getNumber());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(8, ixType_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7353,6 +7489,8 @@ public final class Protos {
         }
         source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
         bitField0_ = (bitField0_ & ~0x00000020);
+        ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -7410,6 +7548,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000010;
         }
         result.source_ = source_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.ixType_ = ixType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7466,6 +7608,9 @@ public final class Protos {
         }
         if (other.hasSource()) {
           setSource(other.getSource());
+        }
+        if (other.hasIxType()) {
+          setIxType(other.getIxType());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7981,6 +8126,42 @@ public final class Protos {
       public Builder clearSource() {
         bitField0_ = (bitField0_ & ~0x00000020);
         source_ = org.bitcoinj.wallet.Protos.TransactionConfidence.Source.SOURCE_UNKNOWN;
+        onChanged();
+        return this;
+      }
+
+      // optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];
+      private org.bitcoinj.wallet.Protos.TransactionConfidence.IXType ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
+      /**
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       */
+      public boolean hasIxType() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       */
+      public org.bitcoinj.wallet.Protos.TransactionConfidence.IXType getIxType() {
+        return ixType_;
+      }
+      /**
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       */
+      public Builder setIxType(org.bitcoinj.wallet.Protos.TransactionConfidence.IXType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000040;
+        ixType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .wallet.TransactionConfidence.IXType ixType = 8 [default = IX_NONE];</code>
+       */
+      public Builder clearIxType() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        ixType_ = org.bitcoinj.wallet.Protos.TransactionConfidence.IXType.IX_NONE;
         onChanged();
         return this;
       }
@@ -19010,8 +19191,9 @@ public final class Protos {
       "t_height\030\002 \001(\005\022\036\n\026overriding_transaction",
       "\030\003 \001(\014\022\r\n\005depth\030\004 \001(\005\022)\n\014broadcast_by\030\006 " +
       "\003(\0132\023.wallet.PeerAddress\0224\n\006source\030\007 \001(\016" +
-      "2$.wallet.TransactionConfidence.Source\"O" +
-      "\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n\007PEN" +
+      "2$.wallet.TransactionConfidence.Source\u0012=\" +\n" +
+      "\"\\n\\006ixType\\030\\010 \\001(\\0162$.wallet.TransactionConfi\" +\n" +
+      "\"dence.IXType:\u0007IX_NONE\"O\n\004Type\022\013\n\007UNKNOWN\020\000\022\014\n\010BUILDING\020\001\022\013\n\007PEN" +
       "DING\020\002\022\025\n\021NOT_IN_BEST_CHAIN\020\003\022\010\n\004DEAD\020\004\"" +
       "A\n\006Source\022\022\n\016SOURCE_UNKNOWN\020\000\022\022\n\016SOURCE_" +
       "NETWORK\020\001\022\017\n\013SOURCE_SELF\020\002\"\323\005\n\013Transacti" +

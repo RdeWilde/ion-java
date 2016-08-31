@@ -18,15 +18,8 @@ package org.bitcoinj.params;
 
 import java.math.BigInteger;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.blackcoinj.pos.BlackcoinMagic;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
@@ -78,25 +71,25 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
       
     @Override  
     public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore) throws BlockStoreException {
-  		BigInteger targetLimit = BlackcoinMagic.proofOfWorkLimit;
+  		BigInteger targetLimit = CoinDefinition.proofOfWorkLimit;
   		
   		Block prevBlock = pindexLast.getHeader();		
 
   		StoredBlock storedPrevPrev = blockStore.get(prevBlock.getPrevBlockHash());
   		Block prevPrevBlock = storedPrevPrev.getHeader();	
 
-  	    int targetSpacing = BlackcoinMagic.targetSpacing2;
+  	    int targetSpacing = CoinDefinition.targetSpacing2;
   	    
   	    //int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
   	    int actualSpacing = (int) (prevBlock.getTimeSeconds() - prevPrevBlock.getTimeSeconds());
   	    
-  	    if  (pindexLast.getHeight() > BlackcoinMagic.protocolV1RetargetingFixed) {
+  	    if  (pindexLast.getHeight() > CoinDefinition.protocolV1RetargetingFixed) {
   	    	if (actualSpacing < 0)
   		    	actualSpacing = targetSpacing;
   	    }
   	    
   	    //nTime > 1444028400;
-  	    if (pindexLast.getHeader().getTimeSeconds() > BlackcoinMagic.txTimeProtocolV3) {
+  	    if (pindexLast.getHeader().getTimeSeconds() > CoinDefinition.txTimeProtocolV3) {
   	        if (actualSpacing > targetSpacing * 10)
   	        	actualSpacing = targetSpacing * 10;
   	    }	    
@@ -104,7 +97,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
   	    // ppcoin: target change every block
   	    // ppcoin: retarget with exponential moving toward target spacing	  
   	    // int64_t nInterval = nTargetTimespan / nTargetSpacing;
-  	    int interval = BlackcoinMagic.targetTimespan / targetSpacing;
+  	    int interval = CoinDefinition.targetTimespan / targetSpacing;
   	    //bnNew.SetCompact(pindexPrev->nBits);
   	    BigInteger newDifficulty = Utils.decodeCompactBits(prevBlock.getDifficultyTarget());
   	   

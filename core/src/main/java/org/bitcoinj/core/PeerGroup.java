@@ -32,7 +32,6 @@ import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.script.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.utils.Threading;
-import org.blackcoinj.pos.BlackcoinMagic;
 import org.blackcoinj.stake.BlockBroadcast;
 import org.slf4j.*;
 
@@ -1937,7 +1936,7 @@ public class PeerGroup implements TransactionBroadcaster {
      * be disconnected and another one will be tried instead.
      
     public void setMinRequiredProtocolVersion() {
-        this.vMinRequiredProtocolVersion = BlackcoinMagic.protocolVersion;
+        this.vMinRequiredProtocolVersion = CoinDefinition.protocolVersion;
     }
 
     /** The minimum protocol version required: defaults to the version required for Bloom filtering.
@@ -1994,7 +1993,7 @@ public class PeerGroup implements TransactionBroadcaster {
         // better then we'll settle for the highest we found instead.
         int highestVersion = 0, preferredVersion = 0;
         // If/when PREFERRED_VERSION is not equal to vMinRequiredProtocolVersion, reenable the last test in PeerGroupTest.downloadPeerSelection
-        final int PREFERRED_VERSION = BlackcoinMagic.protocolVersion;
+        final int PREFERRED_VERSION = CoinDefinition.protocolVersion;
         for (Peer peer : candidates) {
             highestVersion = Math.max(peer.getPeerVersionMessage().clientVersion, highestVersion);
             preferredVersion = Math.min(highestVersion, PREFERRED_VERSION);

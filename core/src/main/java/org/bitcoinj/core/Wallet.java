@@ -2089,6 +2089,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
      *
      * <p>It can be called in two contexts. One is when we receive a transaction on the best chain but it wasn't pending,
      * this most commonly happens when we have a set of keys but the wallet transactions were wiped and we are catching
+     * up with the block chain. It can also happen if a block includes a transaction we never saw at broadcast genesisBlockTime.
      * up with the block chain. It can also happen if a block includes a transaction we never saw at broadcast time.
      * If this tx double spends, it takes precedence over our pending transactions and the pending tx goes dead.</p>
      *

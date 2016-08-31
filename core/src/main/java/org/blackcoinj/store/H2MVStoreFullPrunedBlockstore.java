@@ -5,16 +5,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.StoredUndoableBlock;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UTXOProviderException;
+
+import org.bitcoinj.core.*;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
-import org.blackcoinj.pos.BlackcoinMagic;
 import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStore;
 import org.slf4j.Logger;
@@ -163,7 +157,7 @@ public class H2MVStoreFullPrunedBlockstore implements FullPrunedBlockStore {
 	@Override
 	public void put(StoredBlock storedBlock, StoredUndoableBlock undoableBlock) throws BlockStoreException {
 		Sha256Hash hash = storedBlock.getHeader().getHash();
-		if (!hash.equals(Sha256Hash.wrap(BlackcoinMagic.checkpoint0)))
+		if (!hash.equals(Sha256Hash.wrap(CoinDefinition.checkpoint0)))
 			updatePrevWithNextBlock(storedBlock, undoableBlock);
 		
 		insertOrUpdate(storedBlock, undoableBlock);

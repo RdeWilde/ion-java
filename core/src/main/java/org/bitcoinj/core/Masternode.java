@@ -1,7 +1,5 @@
 package org.bitcoinj.core;
 
-import com.squareup.okhttp.internal.Network;
-import org.bitcoinj.core.*;
 import org.bitcoinj.utils.Threading;
 import org.darkcoinj.DarkSend;
 import org.slf4j.Logger;
@@ -10,10 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.net.InetAddress;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 /**
  * Created by Eric on 2/8/2015.
@@ -84,7 +79,7 @@ public class Masternode extends Message{
         cacheInputAgeBlock = 0;
         unitTest = false;
         allowFreeTx = true;
-        protocolVersion = CoinDefinition.PROTOCOL_VERSION;
+        protocolVersion = CoinDefinition.protocolVersion;
         nLastDsq = 0;
         nScanningErrorCount = 0;
         nLastScanningErrorBlockHeight = 0;
@@ -276,7 +271,7 @@ public class Masternode extends Message{
         vin = new TransactionInput(params, null, payload, cursor);
         cursor += vin.getMessageSize();
 
-        address = new MasternodeAddress(params, payload, cursor, CoinDefinition.PROTOCOL_VERSION);
+        address = new MasternodeAddress(params, payload, cursor, CoinDefinition.protocolVersion);
         cursor += address.getMessageSize();
 
         pubkey = new PublicKey(params, payload, cursor);
@@ -376,13 +371,13 @@ public class Masternode extends Message{
         }
 
 
-        //CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+        //CHashWriter ss(SER_GETHASH, protocolVersion);
         //ss << hash;
         //uint256 hash2 = ss.GetHash();
 
         Sha256Hash hash2 = Sha256Hash.twiceOf(hash.getBytes());
 
-        /*CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
+        /*CHashWriter ss2(SER_GETHASH, protocolVersion);
         ss2 << hash;
         ss2 << aux;
         uint256 hash3 = ss2.GetHash();*/
@@ -472,13 +467,13 @@ aux=b4bc8e63e2d703ba86b74f9df2d13089e07eef45afbd31614eb6ad29d4f9acdb
 
 
 
-        //CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+        //CHashWriter ss(SER_GETHASH, protocolVersion);
         //ss << hash;
         //uint256 hash2 = ss.GetHash();
 
         Sha256Hash hash2 = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(hash.getReversedBytes()));
 
-        /*CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
+        /*CHashWriter ss2(SER_GETHASH, protocolVersion);
         ss2 << hash;
         ss2 << aux;
         uint256 hash3 = ss2.GetHash();*/

@@ -18,19 +18,12 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.store.MasternodeDB;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.blackcoinj.pos.BlackcoinMagic;
-import org.darkcoinj.DarkSendPool;
-import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.*;
 import java.io.*;
@@ -51,12 +44,12 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * The protocol version this library implements.
      */
-	public static final int PROTOCOL_VERSION = BlackcoinMagic.protocolVersion;
+	public static final int PROTOCOL_VERSION = CoinDefinition.protocolVersion;
 
     /**
      * The alert signing key originally owned by Satoshi, and now passed on to Gavin along with a few others.
      */
-	public static final byte[] SATOSHI_KEY = Utils.HEX.decode(BlackcoinMagic.blackAlertSigningKey);
+	public static final byte[] SATOSHI_KEY = Utils.HEX.decode(CoinDefinition.blackAlertSigningKey);
     /** The string returned by getId() for the main, production network where people trade things. */
     public static final String ID_MAINNET = CoinDefinition.ID_MAINNET; //"org.bitcoin.production";
     /** The string returned by getId() for the testnet. */
@@ -134,7 +127,7 @@ public abstract class NetworkParameters implements Serializable {
             // A script containing the difficulty bits and the following message:
             //
             //   "20 Feb 2014 Bitcoin ATMs come to USA"
-        	byte[] bytes = Utils.HEX.decode(BlackcoinMagic.genesisHashString);
+        	byte[] bytes = Utils.HEX.decode(CoinDefinition.genesisHash);
             t.addInput(new TransactionInput(n, t, bytes));
             ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
             scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
@@ -145,10 +138,10 @@ public abstract class NetworkParameters implements Serializable {
         }
         genesisBlock.addTransaction(t);
         genesisBlock.setPrevBlockHash(Sha256Hash.ZERO_HASH);
-        genesisBlock.setTime(BlackcoinMagic.time);
-        genesisBlock.setNonce(BlackcoinMagic.nonce);
-        genesisBlock.setDifficultyTarget(BlackcoinMagic.genesisDifficultyTarget);
-        genesisBlock.setMerkleRoot(Sha256Hash.wrap(BlackcoinMagic.genesisMerkleRootHashString));
+        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
+        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
+        genesisBlock.setDifficultyTarget(CoinDefinition.genesisDifficultyTarget);
+        genesisBlock.setMerkleRoot(Sha256Hash.wrap(CoinDefinition.genesisMerkleRoot));
         genesisBlock.setStakeModifier(0l);
         genesisBlock.setStakeModifier2(Sha256Hash.ZERO_HASH);
         genesisBlock.setEntropyBit(genesisBlock.getHash().toBigInteger().and(BigInteger.ONE).longValue());
@@ -157,8 +150,8 @@ public abstract class NetworkParameters implements Serializable {
         return genesisBlock;
     }
 
-    public static final int TARGET_TIMESPAN = BlackcoinMagic.targetTimespan;
-    public static final int TARGET_SPACING = BlackcoinMagic.targetSpacing;
+    public static final int TARGET_TIMESPAN = CoinDefinition.targetTimespan;
+    public static final int TARGET_SPACING = CoinDefinition.targetSpacing;
     public static final int INTERVAL = TARGET_TIMESPAN / TARGET_SPACING;
     
     /**
@@ -171,7 +164,7 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * The maximum number of coins to be generated
      */
-    public static final long MAX_COINS = CoinDefinition.MAX_COINS;
+    public static final long MAX_COINS = CoinDefinition.maxCoins;
 
     /**
      * The maximum money to be generated

@@ -22,7 +22,6 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
-import org.blackcoinj.pos.BlackcoinMagic;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
@@ -30,11 +29,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import net.jcip.annotations.GuardedBy;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.utils.ListenerRegistration;
-import org.bitcoinj.utils.Threading;
-import org.darkcoinj.InstantXSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -421,7 +415,7 @@ public class Peer extends PeerSocketHandler {
             }
             // We check min version after onPeerConnected as channel.close() will
             // call onPeerDisconnected, and we should probably call onPeerConnected first.
-            final int version = BlackcoinMagic.minProtocolVersion;;
+            final int version = CoinDefinition.minProtocolVersion;;
             if (vPeerVersionMessage.clientVersion < version) {
                 log.warn("Connected to a peer speaking protocol version {} but need {}, closing",
                         vPeerVersionMessage.clientVersion, version);
@@ -1659,8 +1653,8 @@ public class Peer extends PeerSocketHandler {
      * @return true if the peer was disconnected as a result
      */
     public boolean setMinProtocolVersion() {
-        if (getVersionMessage().clientVersion < BlackcoinMagic.minProtocolVersion) {
-            log.warn("{}: Disconnecting due to new min protocol version {}", this, BlackcoinMagic.protocolVersion);
+        if (getVersionMessage().clientVersion < CoinDefinition.minProtocolVersion) {
+            log.warn("{}: Disconnecting due to new min protocol version {}", this, CoinDefinition.protocolVersion);
             close();
             return true;
         }

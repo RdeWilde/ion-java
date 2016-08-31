@@ -92,7 +92,7 @@ public class WalletPasswordController {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public static final String TAG = WalletPasswordController.class.getName() + ".target-time";
+    public static final String TAG = WalletPasswordController.class.getName() + ".target-genesisBlockTime";
 
     // Writes the given time to the wallet as a tag so we can find it again in this class.
     public static void setTargetTime(Duration targetTime) {

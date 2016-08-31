@@ -18,19 +18,10 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.CoinDefinition;
-import static org.bitcoinj.core.Utils.HEX;
 
-import java.math.BigInteger;
 import java.util.Date;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-import org.blackcoinj.pos.BlackcoinMagic;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -48,26 +39,26 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         packetMagic = CoinDefinition.testnetPacketMagic;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = BlackcoinMagic.proofOfWorkLimit;
-        port = BlackcoinMagic.testPort;
-        addressHeader = BlackcoinMagic.testnetAddressHeader;
-        p2shHeader = BlackcoinMagic.testnetp2shHeader;
+        maxTarget = CoinDefinition.proofOfWorkLimit;
+        port = CoinDefinition.testPort;
+        addressHeader = CoinDefinition.testnetAddressHeader;
+        p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        dumpedPrivateKeyHeader = BlackcoinMagic.bulgarianConst + BlackcoinMagic.testnetAddressHeader;
-        genesisBlock.setTime(BlackcoinMagic.testnetGenesisBlockTime);
-        genesisBlock.setDifficultyTarget(BlackcoinMagic.testnetGenesisBlockDifficultyTarget);
-        genesisBlock.setNonce(BlackcoinMagic.testnetGenesisBlockNonce);
-        spendableCoinbaseDepth = BlackcoinMagic.spendableCoinbaseDepth;
+        dumpedPrivateKeyHeader = CoinDefinition.bulgarianConst + CoinDefinition.testnetAddressHeader;
+        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
+        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash)); // TODO testcheckpoint[0]
-        alertSigningKey = Utils.HEX.decode(BlackcoinMagic.testBlackAlertSigningKey);
+        alertSigningKey = Utils.HEX.decode(CoinDefinition.testBlackAlertSigningKey);
 
         dnsSeeds = CoinDefinition.testnetDnsSeeds;
 
         addrSeeds = null;
-        bip32HeaderPub = BlackcoinMagic.bcpv; //The 4 byte header that serializes in base58 to "bcpv".
-        bip32HeaderPriv = BlackcoinMagic.bcpb; //The 4 byte header that serializes in base58 to "bcpb"
+        bip32HeaderPub = CoinDefinition.ionv; //The 4 byte header that serializes in base58 to "ionv".
+        bip32HeaderPriv = CoinDefinition.ionp; //The 4 byte header that serializes in base58 to "ionp"
     }
 
     private static TestNet3Params instance;
@@ -98,7 +89,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 //            final long timeDelta = nextBlock.getTimeSeconds() - prev.getTimeSeconds();
 //            // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
 //            // goes backwards.
-//            if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
+//            if (timeDelta >= 0 && timeDelta <= NetworkParameters.targetSpacing * 2) {
 //        	// Walk backwards until we find a block that doesn't have the easiest proof of work, then check
 //        	// that difficulty is equal to that one.
 //        	StoredBlock cursor = storedPrev;
