@@ -98,6 +98,8 @@ public class Block extends Message {
     // stake ingredients
     private Sha256Hash nextBlockHash;
     private Sha256Hash stakeHashProof;
+    private boolean isStake;
+    private long stakeTime;
     private long stakeModifier;
     private Sha256Hash stakeModifier2;
     private long entropyBit;
@@ -182,6 +184,10 @@ public class Block extends Message {
         this.nonce = nonce;
         this.transactions = new LinkedList<Transaction>();
         this.transactions.addAll(transactions);
+        this.isStake = proveStake(transactions);
+        if(this.isStake){
+            this.stakeTime = transactions.get(1).getnTime();
+        }
     }
 
 
@@ -253,18 +259,23 @@ public class Block extends Message {
             cursor += tx.getMessageSize();
             optimalEncodingMessageSize += tx.getOptimalEncodingMessageSize();
         }
-        
+
+        isStake = proveStake(transactions);
+        if(isStake){
+            stakeTime = transactions.get(1).getnTime();
+        }
+
         //signature is not serialized
         if(payload.length != cursor){
         	byte[] blockSig = readByteArray();
-           checkBlockSignature(blockSig);
+            checkBlockSignature(blockSig);
+
         }
         
         // No need to set length here. If length was not provided then it should be set at the end of parseLight().
         // If this is a genuine lazy parse then length must have been provided to the constructor.
         transactionsParsed = true;
         transactionBytesValid = parseRetain;
-
         //parseMasterNodeVotes();
     }
 
@@ -609,7 +620,7 @@ public class Block extends Message {
             throw new RuntimeException(e); // Cannot happen.
         }
     }
-    
+
     private Sha256Hash calculateScryptHash() {
     	try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
@@ -1205,23 +1216,92 @@ public class Block extends Message {
     
     private void checkBlockSignature(byte[] blockSig) throws VerificationException {
 
-    	if(getHash().equals(Sha256Hash.ZERO_HASH))
-			return;   	
+        if (getHash().equals(Sha256Hash.ZERO_HASH))
+            return;
+
+        if (transactions.isEmpty() || transactions.size() > MAX_BLOCK_SIZE) { // TODO GetSerializeSize main.cpp#2350
+            throw new VerificationException("Wrong Block size limits failed");
+        }
+
+        // CheckTimeStamp is in verifyHeader
+
+        if (transactions == null || transactions.size() == 0 || !transactions.get(0).isCoinBase()) // TODO
+            throw new VerificationException("Wrong Block no coinbase");
+
+        for (int i = 1; i < transactions.size(); i++)
+            if (transactions.get(i).isCoinBase())
+                throw new VerificationException("Wrong Block more than one coinbase");
+
+//        if (transactions.size() >= 1 && transactions.get(1).getOutputs().size() == 0)
+//            return;
+
+
+        if (isStake()) {
+            if (!proveStake(transactions))
+                throw new VerificationException("Wrong Block proveStake failed");
+
+            if (transactions.get(0).getOutputs().size() != 1 || transactions.get(0).getOutput(0) != null) // TODO output isEmpty
+                throw new VerificationException("Wrong Block coinbase output empty");
+
+            if (transactions.isEmpty() || !transactions.get(1).isCoinStake())
+                throw new VerificationException("Wrong Block second tx is no coinStake");
+
+            for (int i = 2; i < transactions.size(); i++)
+                if (transactions.get(i).isCoinStake())
+                    throw new VerificationException("Wrong Block more than one coinstake");
+        } else {
+//            if (fCheckPOW && !CheckProofOfWork(GetPoWHash(), nBits))
+//                throw new VerificationException("Wrong Block no valid POW " + toString());
+
+            if (transactions.size() <= 1)
+            throw new VerificationException("Wrong Block no POW txs " + toString());
+            // TODO Validate POW
+            return;
+//            throw new VerificationException("Wrong Block no POS stake " + toString());
+        }
+
+        // TODO instantX transaction scanning
+
 //    	const CTxOut& txout = vtx[1].vout[1];
-    	Script scriptPubKey = transactions.get(1).getOutput(1).getScriptPubKey();
-    	
-    	boolean genuine = false;
-    	//
-    	// Solver - Return public keys 
-    	ECDSASignature decodedSignature = ECDSASignature.decodeFromDER(blockSig);
-		if(!decodedSignature.isCanonical())
-    		throw new VerificationException("Is not Canonical");
+        TransactionOutput txout = transactions.get(1).getOutput(1);
+        Script scriptPubKey = txout.getScriptPubKey();
+
+//        byte[] pubKey = getPubKey(transactions);
+
+        boolean genuine = false;
+        //
+        // Solver - Return public keys
+        ECDSASignature decodedSignature = ECDSASignature.decodeFromDER(blockSig);
+        if (!decodedSignature.isCanonical())
+            throw new VerificationException("Is not Canonical");
+//        genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, pubKey);
     	genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, scriptPubKey.getPubKey());
-    	if(!genuine){
-    		throw new VerificationException("Wrong Block signature");
-    	}
+        if (!genuine) {
+            log.info("blockSig " + Utils.HEX.encode(blockSig));
+            log.info("pubkey " + Utils.HEX.encode(scriptPubKey.getPubKey()));
+            throw new VerificationException("Wrong Block signature");
+        }
+    }
     	
+//    private byte[] getPubKey(List<Transaction> tx) {
+    	//vtx[1].vout[1].scriptPubKeyvvv
+//		return tx.get(1).getOutput(1).getScriptPubKey().getPubKey();
+//	}
+
+	private boolean proveStake(List<Transaction> blockTransactions) {
+    	// (vtx.size() > 1 && vtx[1].IsCoinStake());
+    	return blockTransactions.size() > 1 && blockTransactions.get(1).isCoinStake();
 	}
+
+//	private Sha256Hash calculateScryptHash() {
+//    	try {
+//            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+//            writeHeader(bos);
+//            return new Sha256Hash(Utils.reverseBytes(scryptDigest(bos.toByteArray())));
+//        } catch (IOException e) {
+//            throw new RuntimeException(e); // Cannot happen.
+//        }
+//	}
     
     public Sha256Hash getNextBlockHash() {
 		return nextBlockHash;
@@ -1239,6 +1319,22 @@ public class Block extends Message {
 		this.stakeHashProof = stakeHashProof;
 	}
 	
+	public boolean isStake() {
+		return isStake;
+	}
+
+	public void setStake(boolean isStake) {
+		this.isStake = isStake;
+	}
+
+	public long getStakeTime() {
+		return stakeTime;
+	}
+
+	public void setStakeTime(long stakeTime) {
+		this.stakeTime = stakeTime;
+	}
+
 	public long getStakeModifier() {
 		return stakeModifier;
 	}

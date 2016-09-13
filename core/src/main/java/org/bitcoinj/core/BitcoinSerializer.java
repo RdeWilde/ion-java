@@ -204,13 +204,14 @@ public class BitcoinSerializer {
         try {
             return makeMessage(header.command, header.size, payloadBytes, hash, header.checksum);
         } catch (Exception e) {
-            throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
+            throw new ProtocolException("Received " + header.size + " byte '" +  header.command+ "' message: " + header.command + ". Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
         }
     }
 
     private Message makeMessage(String command, int length, byte[] payloadBytes, byte[] hash, byte[] checksum) throws ProtocolException {
         // We use an if ladder rather than reflection because reflection is very slow on Android.
         Message message;
+
         if (command.equals("version")) {
             return new VersionMessage(params, payloadBytes);
         } else if (command.equals("inv")) {
@@ -256,6 +257,8 @@ public class BitcoinSerializer {
             return new UTXOsMessage(params, payloadBytes);
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
+        } else if (command.equals("dsee")) {
+            return new DarkSendElectionEntryMessage(params, payloadBytes);
         } else if (command.equals("dseep")) {
             return new DarkSendElectionEntryPingMessage(params, payloadBytes);
         } else if (command.equals("ix")) {

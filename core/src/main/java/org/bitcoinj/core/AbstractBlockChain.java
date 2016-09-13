@@ -418,7 +418,9 @@ public abstract class AbstractBlockChain {
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
                 params.checkDifficultyTransitions(storedPrev, block, blockStore);
                 //TODO consider moving to params.
-                setCheckBlackCoinStake(storedPrev, block);
+                if (block.isStake()) { // TODO valid here?
+                    setCheckBlackCoinStake(storedPrev, block);
+                }
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 

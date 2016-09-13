@@ -608,6 +608,16 @@ public class Transaction extends ChildMessage implements Serializable {
         return inputs.size() == 1 && inputs.get(0).isCoinBase();
     }
 
+
+    public boolean isCoinStake() {
+        maybeParse();
+        // ppcoin: the coin stake transaction is marked with the first output empty
+        //(vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
+        return (inputs.size() > 0 && (inputs.get(0).getOutpoint() != null)
+                && outputs.size() >=2 && outputs.get(0) == null);
+    }
+
+
     /**
      * A transaction is mature if it is either a building coinbase tx that is as deep or deeper than the required coinbase depth, or a non-coinbase tx.
      */

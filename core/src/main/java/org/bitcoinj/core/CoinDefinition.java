@@ -18,8 +18,8 @@ public class CoinDefinition {
 
 //    public static final String cryptsyMarketId = "0";
 //    public static final String cryptsyMarketCurrency = "ION";
-//    public static final String PATTERN_PRIVATE_KEY_START_UNCOMPRESSED = "[7]";
-//    public static final String PATTERN_PRIVATE_KEY_START_COMPRESSED = "[X]";
+    public static final String PATTERN_PRIVATE_KEY_START_UNCOMPRESSED = "[7]";
+    public static final String PATTERN_PRIVATE_KEY_START_COMPRESSED = "[X]";
 
     // To decrease granularity of timestamp
     // Supposed to be 2^n-1
@@ -42,24 +42,24 @@ public class CoinDefinition {
         Millicoins,
     }
 //    public static final CoinPrecision coinPrecision = CoinPrecision.Coins;
-//
-//    public static final String UNSPENT_API_URL = "https://chainz.cryptoid.info/ion/api.dws?q=unspent";
 
-//    public enum UnspentAPIType {
-//        BitEasy,
-//        Blockr,
-//        Abe,
-//        Cryptoid,
-//    };
-//    public static final UnspentAPIType UnspentAPI = UnspentAPIType.Cryptoid;
+    public static final String UNSPENT_API_URL = "https://chainz.cryptoid.info/ion/api.dws?q=unspent";
 
-//    public static final String BLOCKEXPLORER_BASE_URL_PROD = "https://ionchain.xom/";
-//    public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/";             //blockr.io path
-//    public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx/";              //blockr.io path
-//    public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
-//    public static final String BLOCKEXPLORER_BASE_URL_TEST = "https://testnet.ionchain.com/";
+    public enum UnspentAPIType {
+        BitEasy,
+        Blockr,
+        Abe,
+        Cryptoid,
+    };
+    public static final UnspentAPIType UnspentAPI = UnspentAPIType.Cryptoid;
 
-//    public static final String DONATION_ADDRESS = "iZbDhBuCqq6NntURxHo5s5S5a7oYcFaZcY";  //Hash Engineering donation DASH address
+    public static final String BLOCKEXPLORER_BASE_URL_PROD = "https://ionchain.xom/";
+    public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/";             //blockr.io path
+    public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx/";              //blockr.io path
+    public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
+    public static final String BLOCKEXPLORER_BASE_URL_TEST = "https://testnet.ionchain.com/";
+
+    public static final String DONATION_ADDRESS = "iZbDhBuCqq6NntURxHo5s5S5a7oYcFaZcY";  //Hash Engineering donation DASH address
 
     enum CoinHash {
         SHA256,
@@ -83,15 +83,14 @@ public class CoinDefinition {
 
     public static final long minTxFee = Coin.valueOf(1000).longValue();
 //    public static final long DUST_LIMIT = Coin.valueOf(1000).longValue(); //main.h CTransaction::GetMinFee
-//    public static final long INSTANTX_FEE = Coin.valueOf(1000000).longValue();
-
+    public static final long INSTANTX_FEE = Coin.valueOf(1000000).longValue();
     //
     // Ion
     //
 
     public static final int protocolVersion = 60027;
     public static final int minProtocolVersion = 60016;
-    public static final long blockVersion = 7;
+    public static final long blockVersion = 1;
     public static final int protocolV1RetargetingFixed = 38423; // TODO
     public static final long txTimeProtocolV3 = 1444028400; // TODO
 
@@ -141,8 +140,8 @@ public class CoinDefinition {
     static public long genesisBlockNonce = (468977L);                         //main.cpp: LoadBlockIndex
 
     //base58.h#L279 PUBKEY_ADDRESS = 25
-    public static final int addressHeader = 25;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
-    public static final int p2shHeader = 85;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
+    public static final int addressHeader = 103;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
+    public static final int p2shHeader = 88;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
     static public String genesisHash = "000001a7bb3214e3e1d2e4c256082b817a3c5dff5def37456ae16d7edaa508be"; //main.cpp: hashGenesisBlock
     static public String genesisMerkleRoot = "a1de9df44936bd1dd483e217fa17ec1881d2caf741ca67a33f6cd6850183078c"; // ? or is this block 1 TODO
 //    static public int genesisBlockValue = 10900000;                                                              //main.cpp: LoadBlockIndex
@@ -163,7 +162,7 @@ public class CoinDefinition {
     public static final int testPort = 51002;     //protocol.h GetDefaultPort(testnet=true)
     public static String testBlackAlertSigningKey = ""; // TODO
     public static final boolean supportsTestNet = true;
-    public static final int testnetAddressHeader = 111;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS_TEST
+    public static final int testnetAddressHeader = 127;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS_TEST
     public static final int testnetp2shHeader = 196;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS_TEST
     public static final long testnetPacketMagic = 0x5ff21530;      //
     public static final String testnetGenesisHash = "0000070638e1fb122fb31b4753a5311f3c8784604d9f6ce42e8fec96d94173b4";

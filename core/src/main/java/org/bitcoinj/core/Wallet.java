@@ -2318,6 +2318,11 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             }
 
             isConsistentOrThrow();
+            //Dash Specific
+            if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
+                context.instantx.mapTxLockReq.put(tx.getHash(), tx);
+                context.instantx.createNewLock((TransactionLockRequest)tx);
+            }
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
@@ -2525,12 +2530,14 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         transactions.put(tx.getHash(), tx);
         switch (pool) {
         case UNSPENT:
+            //case INSTANTX_LOCKED:
             checkState(unspent.put(tx.getHash(), tx) == null);
             break;
         case SPENT:
             checkState(spent.put(tx.getHash(), tx) == null);
             break;
         case PENDING:
+        //case INSTANTX_PENDING:
             checkState(pending.put(tx.getHash(), tx) == null);
             break;
         case DEAD:
@@ -2611,8 +2618,10 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             switch (pool) {
                 case UNSPENT:
                     return unspent;
+                //case INSTANTX_LOCKED:
                 case SPENT:
                     return spent;
+                //case INSTANTX_PENDING:
                 case PENDING:
                     return pending;
                 case DEAD:
@@ -3403,6 +3412,8 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
         // Tracks if this has been passed to wallet.completeTx already: just a safety check.
         private boolean completed;
+
+        public boolean useInstantX = false;
 
         private SendRequest() {}
 
