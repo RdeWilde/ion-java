@@ -28,7 +28,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class ExponentialBackoff implements Comparable<ExponentialBackoff> {
     public static final int DEFAULT_INITIAL_MILLIS = 100;
-    public static final float DEFAULT_MULTIPLIER = 1.1f;
+    public static final float DEFAULT_MULTIPLIER = 1.5f;
     public static final int DEFAULT_MAXIMUM_MILLIS = 30 * 1000;
 
     private float backoff;

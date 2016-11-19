@@ -102,10 +102,12 @@ class ConnectionHandler implements MessageWriteTarget {
 
     @GuardedBy("lock")
     private void setWriteOps() {
-        // Make sure we are registered to get updated when writing is available again
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-        // Refresh the selector to make sure it gets the new interestOps
-        key.selector().wakeup();
+    	
+    		// Make sure we are registered to get updated when writing is available again
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            // Refresh the selector to make sure it gets the new interestOps
+            key.selector().wakeup();
+    	
     }
 
     // Tries to write any outstanding write bytes, runs in any thread (possibly unlocked)

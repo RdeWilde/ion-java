@@ -30,14 +30,14 @@ import java.util.List;
  * <p>A protocol message that contains a repeated series of block headers, sent in response to the "getheaders" command.
  * This is useful when you want to traverse the chain but know you don't care about the block contents, for example,
  * because you have a freshly created wallet with no keys.</p>
- * 
+ *
  * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class HeadersMessage extends Message {
     private static final Logger log = LoggerFactory.getLogger(HeadersMessage.class);
 
     // The main client will never send us more than this number of headers.
-    public static final int MAX_HEADERS = 2000;
+    public static final int MAX_HEADERS = 200;
 
     private List<Block> blockHeaders;
 
@@ -65,26 +65,41 @@ public class HeadersMessage extends Message {
     }
 
     @Override
-    protected void parse() throws ProtocolException {
+    protected void parseLite() throws ProtocolException {
+        if (length == UNKNOWN_LENGTH) {
+            int saveCursor = cursor;
+            long numHeaders = readVarInt();
+            cursor = saveCursor;
+
+            // Each header has 80 bytes and one more byte for transactions number which is 00.
+            length = 82 * (int)numHeaders;
+        }
+    }
+
+    @Override
+    void parse() throws ProtocolException {
         long numHeaders = readVarInt();
         if (numHeaders > MAX_HEADERS)
             throw new ProtocolException("Too many headers: got " + numHeaders + " which is larger than " +
                                          MAX_HEADERS);
 
         blockHeaders = new ArrayList<Block>();
-        final BitcoinSerializer serializer = this.params.getSerializer(true);
 
         for (int i = 0; i < numHeaders; ++i) {
-            final Block newBlockHeader = serializer.makeBlock(payload, cursor, UNKNOWN_LENGTH);
-            if (newBlockHeader.hasTransactions()) {
+            // Read 80 bytes of the header and one more byte for the transaction list, which is always a 00 because the
+            // transaction list is empty.
+            byte[] blockHeader = readBytes(82);
+            if (blockHeader[80] != 0 || blockHeader[81] != 0)
                 throw new ProtocolException("Block header does not end with a null byte");
-            }
-            cursor += newBlockHeader.optimalEncodingMessageSize;
-            blockHeaders.add(newBlockHeader);
-        }
+            Block newBlockHeader = new Block(this.params, blockHeader, true, true, 82); // TODO 81?
+//            if(newBlockHeader.shouldHaveMasterNodeVotes())
+//            {
+//                if(blockHeader[81] != 0) //   && !context.getId().equals(CoinDefinition.ID_MAINNET)
+//                    throw new ProtocolException("Block header does not end with two null bytes");
+//                else cursor--;
+//            }
 
-        if (length == UNKNOWN_LENGTH) {
-            length = cursor - offset;
+            blockHeaders.add(newBlockHeader);
         }
 
         if (log.isDebugEnabled()) {

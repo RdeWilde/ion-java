@@ -377,19 +377,18 @@ public class BlockChainTest {
         b2.setNonce(2642058077L);
         b2.setTime(1296734343L);
         b2.setPrevBlockHash(Sha256Hash.wrap("000000033cc282bc1fa9dcae7a533263fd7fe66490f550d80076433340831604"));
-        assertEquals("000000037b21cac5d30fc6fda2581cf7b2612908aed2abbcc429c45b0557a15f", b2.getHashAsString());
         b2.verifyHeader();
         return b2;
     }
 
     private static Block getBlock1() throws Exception {
         Block b1 = new Block(testNet);
-        b1.setMerkleRoot(Sha256Hash.wrap("0e8e58ecdacaa7b3c6304a35ae4ffff964816d2b80b62b58558866ce4e648c10"));
-        b1.setNonce(236038445);
-        b1.setTime(1296734340);
-        b1.setPrevBlockHash(Sha256Hash.wrap("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
-        assertEquals("000000033cc282bc1fa9dcae7a533263fd7fe66490f550d80076433340831604", b1.getHashAsString());
+        b1.setMerkleRoot(Sha256Hash.wrap("5a250ed35863ecb10e35fca245254d426f2a5479edad13441e611702fbcce462"));
+        b1.setNonce(154103654);
+        b1.setTime(1466830432);
+        b1.setPrevBlockHash(Sha256Hash.wrap("0000070638e1fb122fb31b4753a5311f3c8784604d9f6ce42e8fec96d94173b4"));
         b1.verifyHeader();
+        b1.verifyTransactions();
         return b1;
     }
 

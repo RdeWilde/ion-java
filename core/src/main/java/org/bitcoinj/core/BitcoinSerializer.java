@@ -66,12 +66,27 @@ public class BitcoinSerializer {
         names.put(GetAddrMessage.class, "getaddr");
         names.put(HeadersMessage.class, "headers");
         names.put(BloomFilter.class, "filterload");
-        names.put(FilteredBlock.class, "merkleblock");
+        //names.put(FilteredBlock.class, "merkleblock");
         names.put(NotFoundMessage.class, "notfound");
         names.put(MemoryPoolMessage.class, "mempool");
         names.put(RejectMessage.class, "reject");
         names.put(GetUTXOsMessage.class, "getutxos");
         names.put(UTXOsMessage.class, "utxos");
+
+        //Dash specific messages
+        names.put(DarkSendElectionEntryPingMessage.class, "dseep");
+
+        names.put(TransactionLockRequest.class, "ix");
+        names.put(ConsensusVote.class, "txlvote");
+
+        names.put(MasternodeBroadcast.class, "mnb");
+        names.put(MasternodePing.class, "mnp");
+        names.put(SporkMessage.class, "spork");
+        names.put(GetSporksMessage.class, "getsporks");
+        names.put(DarkSendEntryGetMessage.class, "dseg");
+        names.put(SyncStatusCount.class, "ssc");
+
+
     }
 
     /**
@@ -189,22 +204,25 @@ public class BitcoinSerializer {
         try {
             return makeMessage(header.command, header.size, payloadBytes, hash, header.checksum);
         } catch (Exception e) {
-            throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
+            throw new ProtocolException("Received " + header.size + " byte '" +  header.command+ "' message: " + header.command + ". Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
         }
     }
 
     private Message makeMessage(String command, int length, byte[] payloadBytes, byte[] hash, byte[] checksum) throws ProtocolException {
         // We use an if ladder rather than reflection because reflection is very slow on Android.
         Message message;
+
         if (command.equals("version")) {
             return new VersionMessage(params, payloadBytes);
         } else if (command.equals("inv")) {
             message = new InventoryMessage(params, payloadBytes, parseLazy, parseRetain, length);
         } else if (command.equals("block")) {
             message = new Block(params, payloadBytes, parseLazy, parseRetain, length);
-        } else if (command.equals("merkleblock")) {
-            message = new FilteredBlock(params, payloadBytes);
-        } else if (command.equals("getdata")) {
+        }
+//        else if (command.equals("merkleblock")) {
+//            message = new FilteredBlock(params, payloadBytes);
+//        }
+        else if (command.equals("getdata")) {
             message = new GetDataMessage(params, payloadBytes, parseLazy, parseRetain, length);
         } else if (command.equals("getblocks")) {
             message = new GetBlocksMessage(params, payloadBytes);
@@ -239,7 +257,26 @@ public class BitcoinSerializer {
             return new UTXOsMessage(params, payloadBytes);
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
-        } else {
+        } else if (command.equals("dsee")) {
+            return new DarkSendElectionEntryMessage(params, payloadBytes);
+        } else if (command.equals("dseep")) {
+            return new DarkSendElectionEntryPingMessage(params, payloadBytes);
+        } else if (command.equals("ix")) {
+            return new TransactionLockRequest(params, payloadBytes);
+        } else if (command.equals("txlvote")) {
+            return new ConsensusVote(params, payloadBytes);
+        } else if (command.equals("dsq")) {
+            return new DarkSendQueue(params, payloadBytes);
+        } else if (command.equals("mnb")) {
+            return new MasternodeBroadcast(params, payloadBytes);
+        } else if( command.equals("mnp")) {
+            return new MasternodePing(params, payloadBytes);
+        } else if (command.equals("spork")) {
+            return new SporkMessage(params, payloadBytes, 0);
+        } else if(command.equals("ssc")) {
+            return new SyncStatusCount(params, payloadBytes);
+        }
+        else{
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }

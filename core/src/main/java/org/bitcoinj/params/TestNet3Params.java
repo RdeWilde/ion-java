@@ -17,14 +17,11 @@
 
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.*;
+
 import java.math.BigInteger;
 import java.util.Date;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
@@ -38,36 +35,32 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;
-        // Genesis hash is 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
-        packetMagic = 0x0b110907;
+
+        // Genesis hash is
+
+        packetMagic = CoinDefinition.testnetPacketMagic;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = Utils.decodeCompactBits(0x1d00ffffL);
-        port = 18333;
-        addressHeader = 111;
-        p2shHeader = 196;
+        maxTarget = Utils.decodeCompactBits(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        port = CoinDefinition.testPort;
+        addressHeader = CoinDefinition.testnetAddressHeader;
+        p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        dumpedPrivateKeyHeader = 239;
-        genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d00ffffL);
-        genesisBlock.setNonce(414098458);
-        spendableCoinbaseDepth = 100;
-        subsidyDecreaseBlockCount = 210000;
+        dumpedPrivateKeyHeader = CoinDefinition.bulgarianConst + CoinDefinition.testnetAddressHeader;
+        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
+        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
+        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"));
-        alertSigningKey = Utils.HEX.decode("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");
+        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash)); // TODO testcheckpoint[0]
+        alertSigningKey = Utils.HEX.decode(CoinDefinition.testBlackAlertSigningKey);
 
-        dnsSeeds = new String[] {
-                "testnet-seed.bitcoin.schildbach.de", // Andreas Schildbach
-                "testnet-seed.bitcoin.petertodd.org"  // Peter Todd
-        };
+        dnsSeeds = CoinDefinition.testnetDnsSeeds;
+
         addrSeeds = null;
-        bip32HeaderPub = 0x043587CF;
-        bip32HeaderPriv = 0x04358394;
-
-        majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
-        majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
+        bip32HeaderPub = CoinDefinition.ionv; //The 4 byte header that serializes in base58 to "ionv".
+        bip32HeaderPriv = CoinDefinition.ionp; //The 4 byte header that serializes in base58 to "ionp"
     }
 
     private static TestNet3Params instance;
@@ -84,37 +77,156 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     }
 
     // February 16th 2012
-    private static final Date testnetDiffDate = new Date(1329264000000L);
+    //private static final Date testnetDiffDate = new Date(1329264000000L);
+
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-        final BlockStore blockStore) throws VerificationException, BlockStoreException {
-        if (!isDifficultyTransitionPoint(storedPrev) && nextBlock.getTime().after(testnetDiffDate)) {
-            Block prev = storedPrev.getHeader();
-
-            // After 15th February 2012 the rules on the testnet change to avoid people running up the difficulty
-            // and then leaving, making it too hard to mine a block. On non-difficulty transition points, easy
-            // blocks are allowed if there has been a span of 20 minutes without one.
-            final long timeDelta = nextBlock.getTimeSeconds() - prev.getTimeSeconds();
-            // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
-            // goes backwards.
-            if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
-        	// Walk backwards until we find a block that doesn't have the easiest proof of work, then check
-        	// that difficulty is equal to that one.
-        	StoredBlock cursor = storedPrev;
-        	while (!cursor.getHeader().equals(getGenesisBlock()) &&
-                       cursor.getHeight() % getInterval() != 0 &&
-                       cursor.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
-                    cursor = cursor.getPrev(blockStore);
-        	BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
-        	BigInteger newTarget = nextBlock.getDifficultyTargetAsInteger();
-        	if (!cursorTarget.equals(newTarget))
-                    throw new VerificationException("Testnet block transition that is not allowed: " +
-                	Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
-                	Long.toHexString(nextBlock.getDifficultyTarget()));
-            }
-        } else {
-            super.checkDifficultyTransitions(storedPrev, nextBlock, blockStore);
-        }
+                                           final BlockStore blockStore) throws VerificationException, BlockStoreException {
+        // TODO FIXME verifyDifficulty(getNextTargetRequired(storedPrev, blockStore, nextBlock.isStake()), nextBlock);
     }
+
+
+    // TODO move to block or blockstore?
+    public StoredBlock getPrevBlock(StoredBlock currentBlock, boolean isCoinstake, final BlockStore blockStore) throws BlockStoreException {
+        if (currentBlock.getHeader() != null && currentBlock.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            return currentBlock;
+        }
+
+        StoredBlock prevBlock = currentBlock.getPrev(blockStore);
+        while (prevBlock != null && prevBlock.getHeader() != null && !prevBlock.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            if (prevBlock.getHeader() != null && prevBlock.getHeader().isStake() == isCoinstake)
+                return prevBlock;
+
+            prevBlock = prevBlock.getPrev(blockStore);
+        }
+
+        return prevBlock;
+    }
+
+
+    public BigInteger getProofOfStakeLimit(int nHeight) {
+        // Always v2
+        if (!getId().equals(ID_MAINNET))
+            return CoinDefinition.testnetProofOfStakeLimit;
+
+        return CoinDefinition.proofOfStakeLimit;
+    }
+
+
+    @Override
+    public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore) throws BlockStoreException {
+        return this.getNextTargetRequired(pindexLast, blockStore, false);
+    }
+
+
+    public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore, final boolean isCoinstake) throws BlockStoreException {
+
+        boolean isTestnet = !getId().equals(ID_MAINNET); // TODO testnet vs mainnet
+        BigInteger targetLimit = !isCoinstake  ? (isTestnet ? CoinDefinition.testnetProofOfWorkLimit : CoinDefinition.proofOfWorkLimit) : getProofOfStakeLimit(pindexLast.getHeight()); // TODO testnet vs mainnet
+        // TODO mainnet has diff limit for work vs stake?
+
+
+
+//  		StoredBlock storedPrevPrev = blockStore.get(prevBlock.getPrevBlockHash());
+//  		Block prevPrevBlock = storedPrevPrev.getHeader();
+
+//        Block lastBlock = pindexLast.getHeader();
+//        if (lastBlock.isStake() != isCoinstake)
+//            if ((pindexLast = getPrevBlock(pindexLast, isCoinstake, blockStore)) != null)
+//                lastBlock = pindexLast.getHeader();
+// TODO FIXME NullException
+//        java.lang.NullPointerException: Attempt to invoke virtual method 'int org.bitcoinj.core.StoredBlock.getHeight()' on a null object reference
+//        at org.bitcoinj.params.TestNet3Params.getNextTargetRequired(TestNet3Params.java:125) ~[na:0.0]
+//        at org.bitcoinj.params.TestNet3Params.checkDifficultyTransitions(TestNet3Params.java:86) ~[na:0.0]
+//        at org.bitcoinj.core.AbstractBlockChain.add(AbstractBlockChain.java:419) ~[na:0.0]
+
+        if (pindexLast != null && pindexLast.getHeader().isStake() != isCoinstake)
+            pindexLast = getPrevBlock(pindexLast, isCoinstake, blockStore);
+
+        if (pindexLast == null || pindexLast.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+            return targetLimit;
+
+        StoredBlock storedPrev = getPrevBlock(pindexLast, isCoinstake, blockStore);
+
+        if (storedPrev == null || storedPrev.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+            return targetLimit;
+
+        StoredBlock storedPrevPrev = getPrevBlock(storedPrev, isCoinstake, blockStore);
+
+//        if (storedPrevPrev == null || storedPrevPrev.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+//            return targetLimit;
+
+        int targetSpacing = CoinDefinition.targetSpacing2;
+
+        //int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
+        long actualSpacing = (pindexLast.getHeader().getTimeSeconds() - storedPrev.getHeader().getTimeSeconds());
+
+        if  (pindexLast.getHeight() > CoinDefinition.protocolV1RetargetingFixed || isTestnet) {
+            if (actualSpacing < 0)
+                actualSpacing = targetSpacing;
+        }
+
+        //nTime > 1444028400;
+        if (pindexLast.getHeader().getTimeSeconds() > CoinDefinition.txTimeProtocolV3 || isTestnet) {
+            if (actualSpacing > targetSpacing * 10)
+                actualSpacing = targetSpacing * 10;
+        }
+
+        // ppcoin: target change every block
+        // ppcoin: retarget with exponential moving toward target spacing
+        //bnNew.SetCompact(pindexPrev->nBits);
+        BigInteger newDifficulty = Utils.decodeCompactBits(pindexLast.getHeader().getDifficultyTarget());
+
+        // int64_t nInterval = nTargetTimespan / nTargetSpacing;
+        int interval = CoinDefinition.targetTimespan / targetSpacing;
+
+
+        //bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+        //bnNew /= ((nInterval + 1) * nTargetSpacing);
+        long multiplier = ((interval - 1) * targetSpacing + actualSpacing + actualSpacing);
+        long divider = ((interval + 1)  * targetSpacing);
+        newDifficulty = newDifficulty.multiply(BigInteger.valueOf(multiplier));
+        newDifficulty = newDifficulty.divide(BigInteger.valueOf(divider));
+
+        if (newDifficulty.compareTo(BigInteger.ZERO) <= 0
+                || newDifficulty.compareTo(targetLimit) > 0){
+            return targetLimit;
+        }
+        else
+            return newDifficulty;
+    }
+
+//    @Override
+//    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
+//        final BlockStore blockStore) throws VerificationException, BlockStoreException {
+//        if (!isDifficultyTransitionPoint(storedPrev) && nextBlock.getTime().after(testnetDiffDate)) {
+//            Block prev = storedPrev.getHeader();
+//
+//            // After 15th February 2012 the rules on the testnet change to avoid people running up the difficulty
+//            // and then leaving, making it too hard to mine a block. On non-difficulty transition points, easy
+//            // blocks are allowed if there has been a span of 20 minutes without one.
+//            final long timeDelta = nextBlock.getTimeSeconds() - prev.getTimeSeconds();
+//            // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
+//            // goes backwards.
+//            if (timeDelta >= 0 && timeDelta <= NetworkParameters.targetSpacing * 2) {
+//        	// Walk backwards until we find a block that doesn't have the easiest proof of work, then check
+//        	// that difficulty is equal to that one.
+//        	StoredBlock cursor = storedPrev;
+//        	while (!cursor.getHeader().equals(getGenesisBlock()) &&
+//                       cursor.getHeight() % getInterval() != 0 &&
+//                       cursor.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
+//                    cursor = cursor.getPrev(blockStore);
+//        	BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
+//        	BigInteger newTarget = nextBlock.getDifficultyTargetAsInteger();
+//        	if (!cursorTarget.equals(newTarget))
+//                    throw new VerificationException("Testnet block transition that is not allowed: " +
+//                	Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
+//                	Long.toHexString(nextBlock.getDifficultyTarget()));
+//            }
+//        } else {
+//            super.checkDifficultyTransitions(storedPrev, nextBlock, blockStore);
+//        }
+//    }
+
 }

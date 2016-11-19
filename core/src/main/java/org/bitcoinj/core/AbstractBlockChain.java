@@ -21,6 +21,8 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
+import org.blackcoinj.pos.BlackStakeModifier;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -29,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -83,7 +86,11 @@ public abstract class AbstractBlockChain {
     private static final Logger log = LoggerFactory.getLogger(AbstractBlockChain.class);
     protected final ReentrantLock lock = Threading.lock("blockchain");
 
-    /** Keeps a map of block hashes to StoredBlocks. */
+    public ReentrantLock getLock() {
+		return lock;
+	}
+
+	/** Keeps a map of block hashes to StoredBlocks. */
     private final BlockStore blockStore;
 
     /**
@@ -132,6 +139,7 @@ public abstract class AbstractBlockChain {
     private double falsePositiveRate;
     private double falsePositiveTrend;
     private double previousFalsePositiveRate;
+	private BlackStakeModifier blackStake;
 
     /** See {@link #AbstractBlockChain(Context, List, BlockStore)} */
     public AbstractBlockChain(NetworkParameters params, List<BlockChainListener> listeners,
@@ -145,6 +153,7 @@ public abstract class AbstractBlockChain {
     public AbstractBlockChain(Context context, List<BlockChainListener> listeners,
                               BlockStore blockStore) throws BlockStoreException {
         this.blockStore = blockStore;
+        this.blackStake = new BlackStakeModifier();
         chainHead = blockStore.getChainHead();
         log.info("chain head is at height {}:\n{}", chainHead.getHeight(), chainHead.getHeader());
         this.params = context.getParams();
@@ -292,7 +301,7 @@ public abstract class AbstractBlockChain {
      * Processes a received block and tries to add it to the chain. If there's something wrong with the block an
      * exception is thrown. If the block is OK but cannot be connected to the chain at this time, returns false.
      * If the block can be connected to the chain, returns true.
-     */
+    
     public boolean add(FilteredBlock block) throws VerificationException, PrunedException {
         try {
             // The block has a list of hashes of transactions that matched the Bloom filter, and a list of associated
@@ -315,7 +324,7 @@ public abstract class AbstractBlockChain {
             throw new VerificationException("Could not verify block " + block.getHash().toString() + "\n" +
                     block.toString(), e);
         }
-    }
+    } */
     
     /**
      * Whether or not we are maintaining a set of unspent outputs and are verifying all transactions.
@@ -408,6 +417,10 @@ public abstract class AbstractBlockChain {
                 checkState(lock.isHeldByCurrentThread());
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
                 params.checkDifficultyTransitions(storedPrev, block, blockStore);
+                //TODO consider moving to params.
+                //if (block.isStake()) { // TODO valid here?
+                    //setCheckBlackCoinStake(storedPrev, block); // TODO only if full blockchain
+                //}
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 
@@ -419,8 +432,41 @@ public abstract class AbstractBlockChain {
             lock.unlock();
         }
     }
+    // TODO move to block or blockstore?
+    public StoredBlock getPrevBlock(StoredBlock currentBlock, boolean isCoinstake, final BlockStore blockStore) throws BlockStoreException {
+        StoredBlock prevBlock = currentBlock.getPrev(blockStore);
+        while (prevBlock != null
+            && prevBlock.getHeader() != null
+        ) {
+            if (prevBlock.getHeight() == 0 || (prevBlock.getHeader() != null && prevBlock.getHeader().isStake() == isCoinstake))
+                break;// TODO testnetGenesishash
 
-    /**
+            prevBlock = prevBlock.getPrev(blockStore);
+        }
+
+        return prevBlock;
+    }
+    private void setCheckBlackCoinStake(StoredBlock storedPrev, Block newBlock) throws BlockStoreException{
+    	if(newBlock.getPrevBlockHash().equals(storedPrev.getHeader().getHash())){
+//            if (storedPrev.getHeader().isStake() != newBlock.isStake()) {
+//                storedPrev = getPrevBlock(storedPrev, newBlock.isStake(), blockStore);
+//            }
+
+			this.blackStake.setBlackCoinStake(storedPrev, newBlock);
+			Sha256Hash stakeHashProof = checkAndSetPOS(storedPrev, newBlock);
+			newBlock.setStakeHashProof(stakeHashProof);
+		}
+		
+	}
+
+	/**
+     * This method has to be overridden in FullPrunedBlockChain cause we need transactions to verify POS.
+     */
+    protected Sha256Hash checkAndSetPOS(StoredBlock storedPrev, Block block) throws BlockStoreException {
+		throw new RuntimeException("forgot to override method AbstractBlockChain.checkAndSetPOS");
+	}
+
+	/**
      * Returns the hashes of the currently stored orphan blocks and then deletes them from this objects storage.
      * Used by Peer when a filter exhaustion event has occurred and thus any orphan blocks that have been downloaded
      * might be inaccurate/incomplete.
@@ -635,11 +681,17 @@ public abstract class AbstractBlockChain {
         // Firstly, calculate the block at which the chain diverged. We only need to examine the
         // chain from beyond this block to find differences.
         StoredBlock head = getChainHead();
-        final StoredBlock splitPoint = findSplit(newChainHead, head, blockStore);
-        log.info("Re-organize after split at height {}", splitPoint.getHeight());
+        StoredBlock foundCrack = findSplit(newChainHead, head, blockStore);
+        final StoredBlock splitPoint; 
+        log.info("Re-organize after split at height {}", foundCrack.getHeight());
         log.info("Old chain head: {}", head.getHeader().getHashAsString());
         log.info("New chain head: {}", newChainHead.getHeader().getHashAsString());
-        log.info("Split at block: {}", splitPoint.getHeader().getHashAsString());
+        log.info("Split at block: {}", foundCrack.getHeader().getHashAsString());
+        //in blackcoin it happens that split and head is the same
+        if (head.getHeight() == foundCrack.getHeight())
+        	splitPoint = foundCrack.getPrev(blockStore);
+        else
+        	splitPoint = foundCrack;
         // Then build a list of all blocks in the old part of the chain and the new part.
         final LinkedList<StoredBlock> oldBlocks = getPartialChain(head, splitPoint, blockStore);
         final LinkedList<StoredBlock> newBlocks = getPartialChain(newChainHead, splitPoint, blockStore);
@@ -822,6 +874,669 @@ public abstract class AbstractBlockChain {
             }
         } while (blocksConnectedThisRound > 0);
     }
+
+
+    // February 16th 2012
+    private static final Date testnetDiffDate = new Date(1329264000000L);
+
+    /**
+     * Throws an exception if the blocks difficulty is not correct.
+     */
+    private void checkDifficultyTransitions(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
+        checkState(lock.isHeldByCurrentThread());
+
+        int DiffMode = 1;
+        if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
+            if (storedPrev.getHeight()+1 >= 3000) { DiffMode = 4; }
+        }
+        else {
+            if (storedPrev.getHeight()+1 >= 68589) { DiffMode = 4; }
+            else if (storedPrev.getHeight()+1 >= 34140) { DiffMode = 3; }
+            else if (storedPrev.getHeight()+1 >= 15200) { DiffMode = 2; }
+        }
+
+        if (DiffMode == 1) { checkDifficultyTransitions_V1(storedPrev, nextBlock); return; }
+        else if (DiffMode == 2) { checkDifficultyTransitions_V2(storedPrev, nextBlock); return;}
+        else if (DiffMode == 3) { DarkGravityWave(storedPrev, nextBlock); return;}
+        else if (DiffMode == 4) { DarkGravityWave3(storedPrev, nextBlock); return; }
+
+        DarkGravityWave3(storedPrev, nextBlock);
+
+        return;
+
+    }
+    private void DarkGravityWave1(StoredBlock storedPrev, Block nextBlock) {
+    /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
+        StoredBlock BlockLastSolved = storedPrev;
+        StoredBlock BlockReading = storedPrev;
+        Block BlockCreating = nextBlock;
+        //BlockCreating = BlockCreating;
+        long nBlockTimeAverage = 0;
+        long nBlockTimeAveragePrev = 0;
+        long nBlockTimeCount = 0;
+        long nBlockTimeSum2 = 0;
+        long nBlockTimeCount2 = 0;
+        long LastBlockTime = 0;
+        long PastBlocksMin = 14;
+        long PastBlocksMax = 140;
+        long CountBlocks = 0;
+        BigInteger PastDifficultyAverage = BigInteger.valueOf(0);
+        BigInteger PastDifficultyAveragePrev = BigInteger.valueOf(0);
+
+        //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
+        { verifyDifficulty(params.getMaxTarget(), storedPrev, nextBlock); }
+
+        for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
+            if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+            CountBlocks++;
+
+            if(CountBlocks <= PastBlocksMin) {
+                if (CountBlocks == 1) { PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
+                else
+                {
+                    //PastDifficultyAverage = ((CBigNum().SetCompact(BlockReading->nBits) - PastDifficultyAveragePrev) / CountBlocks) + PastDifficultyAveragePrev;
+                    PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger().subtract(PastDifficultyAveragePrev).divide(BigInteger.valueOf(CountBlocks)).add(PastDifficultyAveragePrev);
+
+                }
+                PastDifficultyAveragePrev = PastDifficultyAverage;
+            }
+
+            if(LastBlockTime > 0){
+                long Diff = (LastBlockTime - BlockReading.getHeader().getTimeSeconds());
+                if(Diff < 0) Diff = 0;
+                if(nBlockTimeCount <= PastBlocksMin) {
+                    nBlockTimeCount++;
+
+                    if (nBlockTimeCount == 1) { nBlockTimeAverage = Diff; }
+                    else { nBlockTimeAverage = ((Diff - nBlockTimeAveragePrev) / nBlockTimeCount) + nBlockTimeAveragePrev; }
+                    nBlockTimeAveragePrev = nBlockTimeAverage;
+                }
+                nBlockTimeCount2++;
+                nBlockTimeSum2 += Diff;
+            }
+            LastBlockTime = BlockReading.getHeader().getTimeSeconds();
+
+            //if (BlockReading->pprev == NULL)
+            try {
+                StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
+                if (BlockReadingPrev == null)
+                {
+                    //assert(BlockReading); break;
+                    return;
+                }
+                BlockReading = BlockReadingPrev;
+            }
+            catch(BlockStoreException x)
+            {
+                return;
+            }
+        }
+
+        BigInteger bnNew = PastDifficultyAverage;
+        if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
+            double SmartAverage = (((nBlockTimeAverage)*0.7)+((nBlockTimeSum2 / nBlockTimeCount2)*0.3));
+            if(SmartAverage < 1) SmartAverage = 1;
+            double Shift = CoinDefinition.targetSpacing /SmartAverage;
+
+            long nActualTimespan = (long)((CountBlocks*CoinDefinition.targetSpacing)/Shift);
+            long nTargetTimespan = (CountBlocks*CoinDefinition.targetSpacing);
+            if (nActualTimespan < nTargetTimespan/3)
+                nActualTimespan = nTargetTimespan/3;
+            if (nActualTimespan > nTargetTimespan*3)
+                nActualTimespan = nTargetTimespan*3;
+
+            // Retarget
+            bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
+            bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
+        }
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
+
+        /*if (bnNew > bnProofOfWorkLimit){
+            bnNew = bnProofOfWorkLimit;
+        }
+
+        return bnNew.GetCompact();*/
+    }
+    private void DarkGravityWave(StoredBlock storedPrev, Block nextBlock) {
+    /* current difficulty formula, limecoin - DarkGravity, written by Evan Duffield - evan@limecoin.io */
+        StoredBlock BlockLastSolved = storedPrev;
+        StoredBlock BlockReading = storedPrev;
+        Block BlockCreating = nextBlock;
+        //BlockCreating = BlockCreating;
+        long nBlockTimeAverage = 0;
+        long nBlockTimeAveragePrev = 0;
+        long nBlockTimeCount = 0;
+        long nBlockTimeSum2 = 0;
+        long nBlockTimeCount2 = 0;
+        long LastBlockTime = 0;
+        long PastBlocksMin = 14;
+        long PastBlocksMax = 140;
+        long CountBlocks = 0;
+        BigInteger PastDifficultyAverage = BigInteger.valueOf(0);
+        BigInteger PastDifficultyAveragePrev = BigInteger.valueOf(0);
+
+        //if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { return bnProofOfWorkLimit.GetCompact(); }
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
+        { verifyDifficulty(params.getMaxTarget(), storedPrev, nextBlock); }
+
+        for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
+            if (PastBlocksMax > 0 && i > PastBlocksMax)
+            {
+                break;
+            }
+            CountBlocks++;
+
+            if(CountBlocks <= PastBlocksMin) {
+                if (CountBlocks == 1) { PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
+                else
+                {
+                    //PastDifficultyAverage = ((CBigNum().SetCompact(BlockReading->nBits) - PastDifficultyAveragePrev) / CountBlocks) + PastDifficultyAveragePrev;
+                    PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger().subtract(PastDifficultyAveragePrev).divide(BigInteger.valueOf(CountBlocks)).add(PastDifficultyAveragePrev);
+
+                }
+                PastDifficultyAveragePrev = PastDifficultyAverage;
+            }
+
+            if(LastBlockTime > 0){
+                long Diff = (LastBlockTime - BlockReading.getHeader().getTimeSeconds());
+                //if(Diff < 0)
+                //   Diff = 0;
+                if(nBlockTimeCount <= PastBlocksMin) {
+                    nBlockTimeCount++;
+
+                    if (nBlockTimeCount == 1) { nBlockTimeAverage = Diff; }
+                    else { nBlockTimeAverage = ((Diff - nBlockTimeAveragePrev) / nBlockTimeCount) + nBlockTimeAveragePrev; }
+                    nBlockTimeAveragePrev = nBlockTimeAverage;
+                }
+                nBlockTimeCount2++;
+                nBlockTimeSum2 += Diff;
+            }
+            LastBlockTime = BlockReading.getHeader().getTimeSeconds();
+
+            //if (BlockReading->pprev == NULL)
+            try {
+                StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
+                if (BlockReadingPrev == null)
+                {
+                    //assert(BlockReading); break;
+                    return;
+                }
+                BlockReading = BlockReadingPrev;
+            }
+            catch(BlockStoreException x)
+            {
+                return;
+            }
+        }
+
+        BigInteger bnNew = PastDifficultyAverage;
+        if (nBlockTimeCount != 0 && nBlockTimeCount2 != 0) {
+            double SmartAverage = ((((double)nBlockTimeAverage)*0.7)+(((double)nBlockTimeSum2 / (double)nBlockTimeCount2)*0.3));
+            if(SmartAverage < 1) SmartAverage = 1;
+            double Shift = CoinDefinition.targetSpacing /SmartAverage;
+
+            double fActualTimespan = (((double)CountBlocks*(double)CoinDefinition.targetSpacing)/Shift);
+            double fTargetTimespan = ((double)CountBlocks*CoinDefinition.targetSpacing);
+            if (fActualTimespan < fTargetTimespan/3)
+                fActualTimespan = fTargetTimespan/3;
+            if (fActualTimespan > fTargetTimespan*3)
+                fActualTimespan = fTargetTimespan*3;
+
+            long nActualTimespan = (long)fActualTimespan;
+            long nTargetTimespan = (long)fTargetTimespan;
+
+            // Retarget
+            bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
+            bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
+        }
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
+
+        /*if (bnNew > bnProofOfWorkLimit){
+            bnNew = bnProofOfWorkLimit;
+        }
+
+        return bnNew.GetCompact();*/
+    }
+    private void DarkGravityWave3(StoredBlock storedPrev, Block nextBlock) {
+        /* current difficulty formula, darkcoin - DarkGravity v3, written by Evan Duffield - evan@darkcoin.io */
+        StoredBlock BlockLastSolved = storedPrev;
+        StoredBlock BlockReading = storedPrev;
+        Block BlockCreating = nextBlock;
+        BlockCreating = BlockCreating;
+        long nActualTimespan = 0;
+        long LastBlockTime = 0;
+        long PastBlocksMin = 24;
+        long PastBlocksMax = 24;
+        long CountBlocks = 0;
+        BigInteger PastDifficultyAverage = BigInteger.ZERO;
+        BigInteger PastDifficultyAveragePrev = BigInteger.ZERO;
+
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || BlockLastSolved.getHeight() < PastBlocksMin) {
+            verifyDifficulty(params.getMaxTarget(), storedPrev, nextBlock);
+            return;
+        }
+
+        for (int i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
+            if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+            CountBlocks++;
+
+            if(CountBlocks <= PastBlocksMin) {
+                if (CountBlocks == 1) { PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
+                else { PastDifficultyAverage = ((PastDifficultyAveragePrev.multiply(BigInteger.valueOf(CountBlocks)).add(BlockReading.getHeader().getDifficultyTargetAsInteger()).divide(BigInteger.valueOf(CountBlocks + 1)))); }
+                PastDifficultyAveragePrev = PastDifficultyAverage;
+            }
+
+            if(LastBlockTime > 0){
+                long Diff = (LastBlockTime - BlockReading.getHeader().getTimeSeconds());
+                nActualTimespan += Diff;
+            }
+            LastBlockTime = BlockReading.getHeader().getTimeSeconds();
+
+            try {
+                StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
+                if (BlockReadingPrev == null)
+                {
+                    //assert(BlockReading); break;
+                    return;
+                }
+                BlockReading = BlockReadingPrev;
+            }
+            catch(BlockStoreException x)
+            {
+                return;
+            }
+        }
+
+        BigInteger bnNew= PastDifficultyAverage;
+
+        long nTargetTimespan = CountBlocks*params.TARGET_SPACING;//nTargetSpacing;
+
+        if (nActualTimespan < nTargetTimespan/3)
+            nActualTimespan = nTargetTimespan/3;
+        if (nActualTimespan > nTargetTimespan*3)
+            nActualTimespan = nTargetTimespan*3;
+
+        // Retarget
+        bnNew = bnNew.multiply(BigInteger.valueOf(nActualTimespan));
+        bnNew = bnNew.divide(BigInteger.valueOf(nTargetTimespan));
+        verifyDifficulty(bnNew, storedPrev, nextBlock);
+
+    }
+
+
+    private void checkDifficultyTransitions_V1(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
+        //checkState(lock.isHeldByCurrentThread());
+        Block prev = storedPrev.getHeader();
+
+        // Is this supposed to be a difficulty transition point?
+        if ((storedPrev.getHeight() + 1) % params.getInterval() != 0) {
+
+            // TODO: Refactor this hack after 0.5 is released and we stop supporting deserialization compatibility.
+            // This should be a method of the NetworkParameters, which should in turn be using singletons and a subclass
+            // for each network type. Then each network can define its own difficulty transition rules.
+            if (params.getId().equals(NetworkParameters.ID_TESTNET) && nextBlock.getTime().after(testnetDiffDate)) {
+                checkTestnetDifficulty(storedPrev, prev, nextBlock);
+                return;
+            }
+
+            // No ... so check the difficulty didn't actually change.
+            if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
+                throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
+                        ": " + Long.toHexString(nextBlock.getDifficultyTarget()) + " vs " +
+                        Long.toHexString(prev.getDifficultyTarget()));
+            return;
+        }
+
+        // We need to find a block far back in the chain. It's OK that this is expensive because it only occurs every
+        // two weeks after the initial block chain download.
+        long now = System.currentTimeMillis();
+        StoredBlock cursor = blockStore.get(prev.getHash());
+
+        int blockstogoback = params.getInterval() - 1;
+        if(storedPrev.getHeight()+1 != params.getInterval())
+            blockstogoback = params.getInterval();
+
+        for (int i = 0; i < blockstogoback; i++) {
+            if (cursor == null) {
+                // This should never happen. If it does, it means we are following an incorrect or busted chain.
+                throw new VerificationException(
+                        "Difficulty transition point but we did not find a way back to the genesis block.");
+            }
+            cursor = blockStore.get(cursor.getHeader().getPrevBlockHash());
+        }
+        long elapsed = System.currentTimeMillis() - now;
+        if (elapsed > 50)
+            log.info("Difficulty transition traversal took {}msec", elapsed);
+
+        Block blockIntervalAgo = cursor.getHeader();
+        int timespan = (int) (prev.getTimeSeconds() - blockIntervalAgo.getTimeSeconds());
+        // Limit the adjustment step.
+        final int targetTimespan = params.getTargetTimespan();
+        if (timespan < targetTimespan / 4)
+            timespan = targetTimespan / 4;
+        if (timespan > targetTimespan * 4)
+            timespan = targetTimespan * 4;
+
+        BigInteger newTarget = Utils.decodeCompactBits(prev.getDifficultyTarget());
+        newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
+        newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
+
+        if (newTarget.compareTo(params.getMaxTarget()) > 0) {
+            log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
+            newTarget = params.getMaxTarget();
+        }
+
+        int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
+        long receivedTargetCompact = nextBlock.getDifficultyTarget();
+
+        // The calculated difficulty is to a higher precision than received, so reduce here.
+        BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
+        newTarget = newTarget.and(mask);
+        long newTargetCompact = Utils.encodeCompactBits(newTarget);
+
+        if (newTargetCompact != receivedTargetCompact)
+            throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                    newTargetCompact + " vs " + receivedTargetCompact);
+    }
+
+    private void checkDifficultyTransitions_V2(StoredBlock storedPrev, Block nextBlock) throws BlockStoreException, VerificationException {
+        final long      	BlocksTargetSpacing			= (long)(2.5 * 60); // 10 minutes
+        int         		TimeDaySeconds				= 60 * 60 * 24;
+        long				PastSecondsMin				= TimeDaySeconds / 40;
+        long				PastSecondsMax				= TimeDaySeconds * 7;
+        long				PastBlocksMin				= PastSecondsMin / BlocksTargetSpacing;   //? blocks
+        long				PastBlocksMax				= PastSecondsMax / BlocksTargetSpacing;   //? blocks
+
+        //if(!fgw.isNativeLibraryLoaded())
+            //long start = System.currentTimeMillis();
+            KimotoGravityWell(storedPrev, nextBlock, BlocksTargetSpacing, PastBlocksMin, PastBlocksMax);
+            //long end1 = System.currentTimeMillis();
+            //if(kgw.isNativeLibraryLoaded())
+        //else
+            //    KimotoGravityWell_N(storedPrev, nextBlock, BlocksTargetSpacing, PastBlocksMin, PastBlocksMax);
+            //long end2 = System.currentTimeMillis();
+            //if(kgw.isNativeLibraryLoaded())
+        //    KimotoGravityWell_N2(storedPrev, nextBlock, BlocksTargetSpacing, PastBlocksMin, PastBlocksMax);
+        /*long end3 = System.currentTimeMillis();
+
+        long java = end1 - start;
+        long n1 = end2 - end1;
+        long n2 = end3 - end2;
+        if(i > 20)
+        {
+            j += java;
+            N += n1;
+            N2 += n2;
+            if(i != 0 && ((i % 10) == 0))
+             //log.info("KGW 10 blocks: J={}; N={} -%.0f%; N2={} -%.0f%", java, n1, ((double)(java-n1))/java*100, n2, ((double)(java-n2))/java*100);
+                 log.info("KGW {} blocks: J={}; N={} -{}%; N2={} -{}%", i-20, j, N, ((double)(j-N))/j*100, N2, ((double)(j-N2))/j*100);
+        }
+        ++i;*/
+    }
+
+    private void KimotoGravityWell(StoredBlock storedPrev, Block nextBlock, long TargetBlocksSpacingSeconds, long PastBlocksMin, long PastBlocksMax)  throws BlockStoreException, VerificationException {
+	/* current difficulty formula, megacoin - kimoto gravity well */
+        //const CBlockIndex  *BlockLastSolved				= pindexLast;
+        //const CBlockIndex  *BlockReading				= pindexLast;
+        //const CBlockHeader *BlockCreating				= pblock;
+        StoredBlock         BlockLastSolved             = storedPrev;
+        StoredBlock         BlockReading                = storedPrev;
+        Block               BlockCreating               = nextBlock;
+
+        BlockCreating				= BlockCreating;
+        long				PastBlocksMass				= 0;
+        long				PastRateActualSeconds		= 0;
+        long				PastRateTargetSeconds		= 0;
+        double				PastRateAdjustmentRatio		= 1f;
+        BigInteger			PastDifficultyAverage = BigInteger.valueOf(0);
+        BigInteger			PastDifficultyAveragePrev = BigInteger.valueOf(0);;
+        double				EventHorizonDeviation;
+        double				EventHorizonDeviationFast;
+        double				EventHorizonDeviationSlow;
+
+        long start = System.currentTimeMillis();
+
+        if (BlockLastSolved == null || BlockLastSolved.getHeight() == 0 || (long)BlockLastSolved.getHeight() < PastBlocksMin)
+        { verifyDifficulty(params.getMaxTarget(), storedPrev, nextBlock); }
+
+        int i = 0;
+        long LatestBlockTime = BlockLastSolved.getHeader().getTimeSeconds();
+
+        for (i = 1; BlockReading != null && BlockReading.getHeight() > 0; i++) {
+            if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+            PastBlocksMass++;
+
+            if (i == 1)	{ PastDifficultyAverage = BlockReading.getHeader().getDifficultyTargetAsInteger(); }
+            else		{ PastDifficultyAverage = ((BlockReading.getHeader().getDifficultyTargetAsInteger().subtract(PastDifficultyAveragePrev)).divide(BigInteger.valueOf(i)).add(PastDifficultyAveragePrev)); }
+            PastDifficultyAveragePrev = PastDifficultyAverage;
+
+
+            if (BlockReading.getHeight() > 646120 && LatestBlockTime < BlockReading.getHeader().getTimeSeconds()) {
+                //eliminates the ability to go back in time
+                LatestBlockTime = BlockReading.getHeader().getTimeSeconds();
+            }
+
+            PastRateActualSeconds			= BlockLastSolved.getHeader().getTimeSeconds() - BlockReading.getHeader().getTimeSeconds();
+            PastRateTargetSeconds			= TargetBlocksSpacingSeconds * PastBlocksMass;
+            PastRateAdjustmentRatio			= 1.0f;
+            if (BlockReading.getHeight() > 646120){
+                //this should slow down the upward difficulty change
+                if (PastRateActualSeconds < 5) { PastRateActualSeconds = 5; }
+            }
+            else {
+                if (PastRateActualSeconds < 0) { PastRateActualSeconds = 0; }
+            }
+            if (PastRateActualSeconds != 0 && PastRateTargetSeconds != 0) {
+                PastRateAdjustmentRatio			= (double)PastRateTargetSeconds / PastRateActualSeconds;
+            }
+            EventHorizonDeviation			= 1 + (0.7084 * java.lang.Math.pow((Double.valueOf(PastBlocksMass)/Double.valueOf(28.2)), -1.228));
+            EventHorizonDeviationFast		= EventHorizonDeviation;
+            EventHorizonDeviationSlow		= 1 / EventHorizonDeviation;
+
+            if (PastBlocksMass >= PastBlocksMin) {
+                if ((PastRateAdjustmentRatio <= EventHorizonDeviationSlow) || (PastRateAdjustmentRatio >= EventHorizonDeviationFast))
+                {
+                    /*assert(BlockReading)*/;
+                    break;
+                }
+            }
+            StoredBlock BlockReadingPrev = blockStore.get(BlockReading.getHeader().getPrevBlockHash());
+            if (BlockReadingPrev == null)
+            {
+                //assert(BlockReading);
+                //Since we are using the checkpoint system, there may not be enough blocks to do this diff adjust, so skip until we do
+                //break;
+                return;
+            }
+            BlockReading = BlockReadingPrev;
+        }
+
+        /*CBigNum bnNew(PastDifficultyAverage);
+        if (PastRateActualSeconds != 0 && PastRateTargetSeconds != 0) {
+            bnNew *= PastRateActualSeconds;
+            bnNew /= PastRateTargetSeconds;
+        } */
+        //log.info("KGW-J, {}, {}, {}", storedPrev.getHeight(), i, System.currentTimeMillis() - start);
+        BigInteger newDifficulty = PastDifficultyAverage;
+        if (PastRateActualSeconds != 0 && PastRateTargetSeconds != 0) {
+            newDifficulty = newDifficulty.multiply(BigInteger.valueOf(PastRateActualSeconds));
+            newDifficulty = newDifficulty.divide(BigInteger.valueOf(PastRateTargetSeconds));
+        }
+
+        if (newDifficulty.compareTo(params.getMaxTarget()) > 0) {
+            log.info("Difficulty hit proof of work limit: {}", newDifficulty.toString(16));
+            newDifficulty = params.getMaxTarget();
+        }
+
+
+        //log.info("KGW-j Difficulty Calculated: {}", newDifficulty.toString(16));
+        verifyDifficulty(newDifficulty, storedPrev, nextBlock);
+
+    }
+
+    static double ConvertBitsToDouble(long nBits){
+        long nShift = (nBits >> 24) & 0xff;
+
+        double dDiff =
+                (double)0x0000ffff / (double)(nBits & 0x00ffffff);
+
+        while (nShift < 29)
+        {
+            dDiff *= 256.0;
+            nShift++;
+        }
+        while (nShift > 29)
+        {
+            dDiff /= 256.0;
+            nShift--;
+        }
+
+        return dDiff;
+    }
+
+    private void verifyDifficulty(BigInteger calcDiff, StoredBlock storedPrev, Block nextBlock)
+    {
+        if (calcDiff.compareTo(params.getMaxTarget()) > 0) {
+            log.info("Difficulty hit proof of work limit: {}", calcDiff.toString(16));
+            calcDiff = params.getMaxTarget();
+        }
+        int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
+        BigInteger receivedDifficulty = nextBlock.getDifficultyTargetAsInteger();
+
+        // The calculated difficulty is to a higher precision than received, so reduce here.
+        BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
+        calcDiff = calcDiff.and(mask);
+        if(params.getId().compareTo(params.ID_TESTNET) == 0)
+        {
+            if (calcDiff.compareTo(receivedDifficulty) != 0)
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                        receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+        }
+        else
+        {
+
+
+
+            int height = storedPrev.getHeight() + 1;
+            ///if(System.getProperty("os.name").toLowerCase().contains("windows"))
+            //{
+            if(height <= 68589)
+            {
+                long nBitsNext = nextBlock.getDifficultyTarget();
+
+                long calcDiffBits = (accuracyBytes+3) << 24;
+                calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                double n1 = ConvertBitsToDouble(calcDiffBits);
+                double n2 = ConvertBitsToDouble(nBitsNext);
+
+
+
+
+                if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                              throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+
+            }
+            else
+            {
+                    if (calcDiff.compareTo(receivedDifficulty) != 0)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+            }
+
+
+
+            /*
+            if(height >= 34140)
+                {
+                    long nBitsNext = nextBlock.getDifficultyTarget();
+
+                    long calcDiffBits = (accuracyBytes+3) << 24;
+                    calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                    double n1 = ConvertBitsToDouble(calcDiffBits);
+                    double n2 = ConvertBitsToDouble(nBitsNext);
+
+                    if(height <= 45000) {
+
+
+                        if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                            throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                    receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+
+                    }
+                    else if(java.lang.Math.abs(n1-n2) > n1*0.005)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+                }
+                else
+                {
+                    if (calcDiff.compareTo(receivedDifficulty) != 0)
+                        throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                                receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+                }
+            */
+
+            //}
+            /*else
+            {
+
+            if(height >= 34140 && height <= 45000)
+            {
+                long nBitsNext = nextBlock.getDifficultyTarget();
+
+                long calcDiffBits = (accuracyBytes+3) << 24;
+                calcDiffBits |= calcDiff.shiftRight(accuracyBytes*8).longValue();
+
+                double n1 = ConvertBitsToDouble(calcDiffBits);
+                double n2 = ConvertBitsToDouble(nBitsNext);
+
+                if(java.lang.Math.abs(n1-n2) > n1*0.2)
+                    throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                            receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+
+            }
+            else
+            {
+                if (calcDiff.compareTo(receivedDifficulty) != 0)
+                    throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                            receivedDifficulty.toString(16) + " vs " + calcDiff.toString(16));
+            }
+
+            }*/
+        }
+    }
+
+    private void checkTestnetDifficulty(StoredBlock storedPrev, Block prev, Block next) throws VerificationException, BlockStoreException {
+        checkState(lock.isHeldByCurrentThread());
+        // After 15th February 2012 the rules on the testnet change to avoid people running up the difficulty
+        // and then leaving, making it too hard to mine a block. On non-difficulty transition points, easy
+        // blocks are allowed if there has been a span of 20 minutes without one.
+        final long timeDelta = next.getTimeSeconds() - prev.getTimeSeconds();
+        // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
+        // goes backwards.
+        if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
+            // Walk backwards until we find a block that doesn't have the easiest proof of work, then check
+            // that difficulty is equal to that one.
+            StoredBlock cursor = storedPrev;
+            while (!cursor.getHeader().equals(params.getGenesisBlock()) &&
+                   cursor.getHeight() % params.getInterval() != 0 &&
+                   cursor.getHeader().getDifficultyTargetAsInteger().equals(params.getMaxTarget()))
+                cursor = cursor.getPrev(blockStore);
+            BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
+            BigInteger newTarget = next.getDifficultyTargetAsInteger();
+            if (!cursorTarget.equals(newTarget))
+                throw new VerificationException("Testnet block transition that is not allowed: " +
+                    Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
+                    Long.toHexString(next.getDifficultyTarget()));
+        }
+    }
+
 
     /**
      * Returns true if any connected wallet considers any transaction in the block to be relevant.

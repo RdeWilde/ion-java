@@ -238,7 +238,8 @@ public class WalletProtobufSerializer {
         
         txBuilder.setPool(getProtoPool(wtx))
                  .setHash(hashToByteString(tx.getHash()))
-                 .setVersion((int) tx.getVersion());
+                 .setVersion((int) tx.getVersion())
+                 .setNTime((int) tx.getnTime());
 
         if (tx.getUpdateTime() != null) {
             txBuilder.setUpdatedAt(tx.getUpdateTime().getTime());
@@ -355,6 +356,14 @@ public class WalletProtobufSerializer {
                     // Fall through.
                 default:
                     confidenceBuilder.setSource(Protos.TransactionConfidence.Source.SOURCE_UNKNOWN); break;
+            }
+            TransactionConfidence.IXType ixType = confidence.getIXType();
+            switch(ixType)
+            {
+                case IX_LOCKED: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_LOCKED); break;
+                case IX_REQUEST: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_REQUEST); break;
+                case IX_NONE:
+                default: confidenceBuilder.setIxType(Protos.TransactionConfidence.IXType.IX_NONE); break;
             }
         }
 
@@ -553,6 +562,7 @@ public class WalletProtobufSerializer {
 
     private void readTransaction(Protos.Transaction txProto, NetworkParameters params) throws UnreadableWalletException {
         Transaction tx = new Transaction(params);
+        tx.setnTime(txProto.getNTime());
         if (txProto.hasUpdatedAt()) {
             tx.setUpdateTime(new Date(txProto.getUpdatedAt()));
         }
@@ -683,6 +693,8 @@ public class WalletProtobufSerializer {
             // These two are equivalent (must be able to read old wallets).
             case NOT_IN_BEST_CHAIN: confidenceType = ConfidenceType.PENDING; break;
             case PENDING: confidenceType = ConfidenceType.PENDING; break;
+            //case INSTANTX_PENDING: confidenceType = ConfidenceType.INSTANTX_PENDING; break;
+            //case INSTANTX_LOCKED: confidenceType = ConfidenceType.INSTANTX_LOCKED; break;
             case UNKNOWN:
                 // Fall through.
             default:
@@ -734,6 +746,15 @@ public class WalletProtobufSerializer {
             case SOURCE_UNKNOWN:
                 // Fall through.
             default: confidence.setSource(TransactionConfidence.Source.UNKNOWN); break;
+        }
+        switch(confidenceProto.getIxType())
+        {
+            case IX_LOCKED: confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED); break;
+            case IX_REQUEST: confidence.setIXType(TransactionConfidence.IXType.IX_REQUEST); break;
+            case IX_NONE:
+            default:
+                confidence.setIXType(TransactionConfidence.IXType.IX_NONE); break;
+
         }
     }
 

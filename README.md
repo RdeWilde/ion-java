@@ -1,10 +1,11 @@
-[![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)   [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master) 
+Donations: **BTaLLZ7mc5yXBdsyKXmP8KGxNVoWKybaHX**
 
-[![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/bitcoinj.png)](https://kiwiirc.com/client/irc.freenode.net/bitcoinj)
+Build status: [![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)  
+Coverage status: [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master)
 
-### Welcome to bitcoinj
+### Welcome to blackcoinj
 
-The bitcoinj library is a Java implementation of the Bitcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Bitcoin Core. It comes with full documentation and some example apps showing how to use it.
+The blackcoinj is a bitcoinj fork a Java implementation of the Blackcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Blackcoin. It comes with full documentation and some example apps showing how to use it.
 
 ### Technologies
 
@@ -46,11 +47,29 @@ This will download the block chain and eventually print a Bitcoin address that i
 If you send coins to that address, it will forward them on to the address you specified.
 
 ```
-  cd examples
-  mvn exec:java -Dexec.mainClass=org.bitcoinj.examples.ForwardingService -Dexec.args="<insert a bitcoin address here>"
+git clone -b blackcoinjPOS3 https://github.com/janko33bd/bitcoinj.git
+
+mvn clean install -Dmaven.test.skip=true
+
+cd examples
 ```
 
-Note that this example app *does not use checkpointing*, so the initial chain sync will be pretty slow. You can make an app that starts up and does the initial sync much faster by including a checkpoints file; see the documentation for
+untar chain[files: chain.tar.001, chain.tar.002, chain.tar.003] and rename to forwarding-service.spvchain
+
+```
+mvn exec:java -Dexec.mainClass=org.bitcoinj.examples.ForwardingService -Dexec.args="BTaLLZ7mc5yXBdsyKXmP8KGxNVoWKybaHX" -Dmaven.test.skip=true --log-file blck.log
+```
+observe blck.log located in examples
+
+Happy hacking ;)
+
+**don't forget that last command where you send the money to address.. it will be forwarded to**
+
+**BTaLLZ7mc5yXBdsyKXmP8KGxNVoWKybaHX so change accordingly.. or leave it there**
+
+Donations: BTaLLZ7mc5yXBdsyKXmP8KGxNVoWKybaHX
+
+This example app *uses checkpointing*, so the initial chain sync will not be slow. You cannot make an app using this library without including a checkpoints file[chain.tar.001, chain.tar.002, chain.tar.003]; see the documentation for
 more info on this technique.
 
 ### Where next?

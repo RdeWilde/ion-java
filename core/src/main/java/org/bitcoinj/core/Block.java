@@ -17,8 +17,11 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.ECKey.ECDSASignature;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -39,7 +42,10 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.bitcoinj.core.Coin.FIFTY_COINS;
+import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
+
+//import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
 
 /**
  * <p>A block is a group of transactions, and is one of the fundamental data structures of the Bitcoin system.
@@ -65,7 +71,7 @@ public class Block extends Message {
      * upgrade everyone to change this, so Bitcoin can continue to grow. For now it exists as an anti-DoS measure to
      * avoid somebody creating a titanically huge but valid block and forcing everyone to download/store it forever.
      */
-    public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
+    public static final int MAX_BLOCK_SIZE = CoinDefinition.maxBlockSize; //1 * 1000 * 1000;
     /**
      * A "sigop" is a signature verification operation. Because they're expensive we also impose a separate limit on
      * the number in a block to prevent somebody mining a huge block that has way more sigops than normal, so is very
@@ -90,6 +96,16 @@ public class Block extends Message {
     private long time;
     private long difficultyTarget; // "nBits"
     private long nonce;
+    
+    // stake ingredients
+    private Sha256Hash nextBlockHash;
+    private Sha256Hash stakeHashProof;
+    private boolean isStake;
+    private long stakeTime;
+    private long stakeModifier;
+    private Sha256Hash stakeModifier2;
+    private long entropyBit;
+	private boolean generatedStakeModifier;
 
     // TODO: Get rid of all the direct accesses to this field. It's a long-since unnecessary holdover from the Dalvik days.
     /** If null, it means this object holds only the headers. */
@@ -97,24 +113,29 @@ public class Block extends Message {
 
     /** Stores the hash of the block. If null, getHash() will recalculate it. */
     private transient Sha256Hash hash;
+    private transient Sha256Hash scryptHash;
 
     private transient boolean headerParsed;
     private transient boolean transactionsParsed;
+    private transient boolean masterNodeVotesParsed;
 
     private transient boolean headerBytesValid;
     private transient boolean transactionBytesValid;
-    
+    private transient boolean masterNodeVotesBytesValid;
+
+
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
     // of the size of the ideal encoding in addition to the actual message size (which Message needs)
     private transient int optimalEncodingMessageSize;
+	private byte[] signature;
 
     /** Special case constructor, used for the genesis node, cloneAsHeader and unit tests. */
     Block(NetworkParameters params) {
         super(params);
         // Set up a few basic things. We are not complete after this though.
         version = 1;
-        difficultyTarget = 0x1d07fff8L;
+        difficultyTarget = params instanceof MainNetParams ? CoinDefinition.genesisDifficultyTarget : CoinDefinition.testnetGenesisBlockDifficultyTarget;
         time = System.currentTimeMillis() / 1000;
         prevBlockHash = Sha256Hash.ZERO_HASH;
 
@@ -139,6 +160,7 @@ public class Block extends Message {
      */
     public Block(NetworkParameters params, byte[] payloadBytes, boolean parseLazy, boolean parseRetain, int length)
             throws ProtocolException {
+
         super(params, payloadBytes, 0, parseLazy, parseRetain, length);
     }
 
@@ -165,10 +187,19 @@ public class Block extends Message {
         this.nonce = nonce;
         this.transactions = new LinkedList<Transaction>();
         this.transactions.addAll(transactions);
+        this.isStake = proveStake(transactions);
+        if(this.isStake){
+            this.stakeTime = transactions.get(1).getnTime();
+        }
     }
 
 
-    /**
+    public Block(NetworkParameters params, long version, Sha256Hash prevBlockHash, long time, long difficultyTarget) {
+    	this(params, version, prevBlockHash, null, time, difficultyTarget, 0, new LinkedList<Transaction>());
+        length = 80;
+    }
+
+	/**
      * <p>A utility method that calculates how much new Bitcoin would be created by the block at the given height.
      * The inflation of Bitcoin is predictable and drops roughly every 4 years (210,000 blocks). At the dawn of
      * the system it was 50 coins per block, in late 2012 it went to 25 coins per block, and so on. The size of
@@ -178,7 +209,8 @@ public class Block extends Message {
      * </p>
      */
     public Coin getBlockInflation(int height) {
-        return FIFTY_COINS.shiftRight(height / params.getSubsidyDecreaseBlockCount());
+        //return Utils.toNanoCoins(50, 0).shiftRight(height / context.getSubsidyDecreaseBlockCount());
+        return /*Utils.toNanoCoins(*/CoinDefinition.GetBlockReward(height)/*, 0)*/;
     }
 
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
@@ -230,11 +262,33 @@ public class Block extends Message {
             cursor += tx.getMessageSize();
             optimalEncodingMessageSize += tx.getOptimalEncodingMessageSize();
         }
+
+        isStake = proveStake(transactions);
+        if(isStake){
+            stakeTime = transactions.get(1).getnTime();
+        }
+
+        //signature is not serialized
+        if(payload.length != cursor){
+        	byte[] blockSig = readByteArray();
+            checkBlockSignature(blockSig);
+        }
+        
         // No need to set length here. If length was not provided then it should be set at the end of parseLight().
         // If this is a genuine lazy parse then length must have been provided to the constructor.
         transactionsParsed = true;
         transactionBytesValid = parseRetain;
+        //parseMasterNodeVotes();
     }
+
+    private static final long START_MASTERNODE_PAYMENTS_1 = 1401033600L; //Sun, 25 May 2014 16:00:00 GMT
+    private static final long START_MASTERNODE_PAYMENTS_STOP_1 = 1401134533L; // Mon, 26 May 2014 20:02:13 GMT
+
+    private static final long START_MASTERNODE_PAYMENTS = 1403728576L; //Fri, 20 Jun 2014 16:00:00 GMT
+    //private static final long START_MASTERNODE_PAYMENTS_STOP = ?
+
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET_1 = 1401757793;
+    private static final long START_MASTERNODE_PAYMENTS_TESTNET = 1403568776L;
 
     @Override
     void parse() throws ProtocolException {
@@ -265,6 +319,7 @@ public class Block extends Message {
             length = cursor - offset;
         } else {
             transactionBytesValid = !transactionsParsed || parseRetain && length > HEADER_SIZE;
+            masterNodeVotesBytesValid = !masterNodeVotesParsed || parseRetain && length > HEADER_SIZE;
         }
         headerBytesValid = !headerParsed || parseRetain && length >= HEADER_SIZE;
     }
@@ -302,6 +357,7 @@ public class Block extends Message {
             parseTransactions();
             if (!parseRetain) {
                 transactionBytesValid = false;
+                masterNodeVotesBytesValid = false;
                 if (headerParsed)
                     payload = null;
             }
@@ -311,6 +367,25 @@ public class Block extends Message {
                     e);
         }
     }
+
+    /*private void maybeParseMasterNodeVotes() {
+
+        if (masterNodeVotesParsed || bytes == null)
+            return;
+        try {
+            //maybeParseTransactions();
+            parseMasterNodeVotes();
+            if (!parseRetain) {
+                masterNodeVotesBytesValid = false;
+                if (headerParsed)
+                    bytes = null;
+            }
+        } catch (ProtocolException e) {
+            throw new LazyParseException(
+                    "ProtocolException caught during lazy parse.  For safe access to fields call ensureParsed before attempting read or write access",
+                    e);
+        }
+    }*/
 
     /**
      * Ensure the object is parsed if needed. This should be called in every getter before returning a value. If the
@@ -337,6 +412,7 @@ public class Block extends Message {
         try {
             maybeParseHeader();
             maybeParseTransactions();
+            //maybeParseMasterNodeVotes();
         } catch (LazyParseException e) {
             if (e.getCause() instanceof ProtocolException)
                 throw (ProtocolException) e.getCause();
@@ -383,7 +459,17 @@ public class Block extends Message {
             throw new ProtocolException(e);
         }
     }
-
+    /*
+    public void ensureParsedMasterNodeVotes() throws ProtocolException {
+        try {
+            maybeParseMasterNodeVotes();
+        } catch (LazyParseException e) {
+            if (e.getCause() instanceof ProtocolException)
+                throw (ProtocolException) e.getCause();
+            throw new ProtocolException(e);
+        }
+    }
+    */
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
@@ -420,6 +506,7 @@ public class Block extends Message {
                 tx.bitcoinSerialize(stream);
             }
         }
+        //writeMasterNodeVotes(stream);
     }
 
     /**
@@ -449,6 +536,7 @@ public class Block extends Message {
         try {
             writeHeader(stream);
             writeTransactions(stream);
+            writeSignature(stream);
         } catch (IOException e) {
             // Cannot happen, we are serializing to a memory stream.
         }
@@ -460,9 +548,18 @@ public class Block extends Message {
         writeHeader(stream);
         // We may only have enough data to write the header.
         writeTransactions(stream);
+        writeSignature(stream);
     }
 
-    /**
+    private void writeSignature(OutputStream stream) throws IOException {
+    	if (signature == null) {
+            return;
+        }
+    	stream.write(new VarInt(signature.length).encode());
+    	stream.write(signature);		
+	}
+
+	/**
      * Provides a reasonable guess at the byte length of the transactions part of the block.
      * The returned value will be accurate in 99% of cases and in those cases where not will probably slightly
      * oversize.
@@ -526,6 +623,16 @@ public class Block extends Message {
         }
     }
 
+    private Sha256Hash calculateScryptHash() {
+    	try {
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+            writeHeader(bos);
+            return Sha256Hash.wrapReversed(Sha256Hash.scryptDigest(bos.toByteArray()));
+        } catch (IOException e) {
+            throw new RuntimeException(e); // Cannot happen.
+        }
+	}
+
     /**
      * Returns the hash of the block (which for a valid, solved block should be below the target) in the form seen on
      * the block explorer. If you call this on block 1 in the mainnet chain
@@ -541,9 +648,15 @@ public class Block extends Message {
      */
     @Override
     public Sha256Hash getHash() {
-        if (hash == null)
-            hash = calculateHash();
-        return hash;
+    	if(getPrevBlockHash().equals(Sha256Hash.ZERO_HASH) || getVersion() != CoinDefinition.blockVersion){
+			if (scryptHash == null)
+				scryptHash = calculateScryptHash();
+			return scryptHash;
+		}else {
+			if (hash == null)
+	            hash = calculateHash();
+			return hash;
+		}
     }
 
     /**
@@ -575,6 +688,12 @@ public class Block extends Message {
 
     /** Copy the block without transactions into the provided empty block. */
     protected final void copyBitcoinHeaderTo(final Block block) {
+    	block.entropyBit = entropyBit;
+    	block.stakeModifier = stakeModifier;
+    	block.stakeModifier2 = stakeModifier2;
+    	block.generatedStakeModifier = generatedStakeModifier;
+    	if(stakeHashProof!=null)
+    		block.stakeHashProof = stakeHashProof;
         block.nonce = nonce;
         block.prevBlockHash = prevBlockHash;
         block.merkleRoot = getMerkleRoot();
@@ -626,8 +745,8 @@ public class Block extends Message {
         while (true) {
             try {
                 // Is our proof of work valid yet?
-                if (checkProofOfWork(false))
-                    return;
+//                if (checkProofOfWork(false))
+//                    return;
                 // No, so increment the nonce and try again.
                 setNonce(getNonce() + 1);
             } catch (VerificationException e) {
@@ -648,7 +767,7 @@ public class Block extends Message {
             throw new VerificationException("Difficulty target is bad: " + target.toString());
         return target;
     }
-
+    
     /** Returns true if the hash of the block is OK (lower than difficulty target). */
     protected boolean checkProofOfWork(boolean throwException) throws VerificationException {
         // This part is key - it is what proves the block was as difficult to make as it claims
@@ -660,8 +779,8 @@ public class Block extends Message {
         // To prevent this attack from being possible, elsewhere we check that the difficultyTarget
         // field is of the right value. This requires us to have the preceeding blocks.
         BigInteger target = getDifficultyTargetAsInteger();
-
         BigInteger h = getHash().toBigInteger();
+
         if (h.compareTo(target) > 0) {
             // Proof of work check failed!
             if (throwException)
@@ -786,7 +905,7 @@ public class Block extends Message {
         // Firstly we need to ensure this block does in fact represent real work done. If the difficulty is high
         // enough, it's probably been done by the network.
         maybeParseHeader();
-        checkProofOfWork(true);
+        //checkProofOfWork(true);
         checkTimestamp();
     }
 
@@ -847,7 +966,7 @@ public class Block extends Message {
     }
 
     /** Exists only for unit testing. */
-    void setMerkleRoot(Sha256Hash value) {
+    public void setMerkleRoot(Sha256Hash value) {
         unCacheHeader();
         merkleRoot = value;
         hash = null;
@@ -1039,7 +1158,7 @@ public class Block extends Message {
             b.setTime(getTimeSeconds() + 1);
         else
             b.setTime(time);
-        b.solve();
+        //b.solve();
         try {
             b.verifyHeader();
         } catch (VerificationException e) {
@@ -1096,6 +1215,183 @@ public class Block extends Message {
     boolean isTransactionBytesValid() {
         return transactionBytesValid;
     }
+    
+    private void checkBlockSignature(byte[] blockSig) throws VerificationException {
+
+        if (isStake() && getHash().equals(Sha256Hash.ZERO_HASH))
+            return;
+
+        // https://github.com/ionomy/ion/blob/130a765b94bbf1a7e0fd3005221211aeed08b889/src/main.cpp#L2852
+        if (!isStake())
+            if (blockSig.length != 0)
+                throw new VerificationException("BlockSig for POW");
+            else
+                return;
+
+        // https://github.com/ionomy/ion/blob/130a765b94bbf1a7e0fd3005221211aeed08b889/src/main.cpp#L2855
+        if (blockSig.length == 0)
+            throw new VerificationException("No blocksig");
+
+//
+//        if (transactions.isEmpty() || transactions.size() > MAX_BLOCK_SIZE) { // TODO GetSerializeSize main.cpp#2350
+//            throw new VerificationException("Wrong Block size limits failed");
+//        }
+//
+//        // CheckTimeStamp is in verifyHeader
+//
+//        if (transactions == null || transactions.size() == 0 || !transactions.get(0).isCoinBase()) // TODO
+//            throw new VerificationException("Wrong Block no coinbase");
+//
+//        for (int i = 1; i < transactions.size(); i++)
+//            if (transactions.get(i).isCoinBase())
+//                throw new VerificationException("Wrong Block more than one coinbase");
+//
+////        if (transactions.size() >= 1 && transactions.get(1).getOutputs().size() == 0)
+////            return;
+//
+//
+//        if (isStake()) {
+//            if (!proveStake(transactions))
+//                throw new VerificationException("Wrong Block proveStake failed");
+//
+//            if (transactions.get(0).getOutputs().size() != 1 || transactions.get(0).getOutput(0) != null) // TODO output isEmpty
+//                throw new VerificationException("Wrong Block coinbase output empty");
+//
+//            if (transactions.isEmpty() || !transactions.get(1).isCoinStake())
+//                throw new VerificationException("Wrong Block second tx is no coinStake");
+//
+//            for (int i = 2; i < transactions.size(); i++)
+//                if (transactions.get(i).isCoinStake())
+//                    throw new VerificationException("Wrong Block more than one coinstake");
+//        } else {
+////            if (fCheckPOW && !CheckProofOfWork(GetPoWHash(), nBits))
+////                throw new VerificationException("Wrong Block no valid POW " + toString());
+//
+//            if (transactions.size() <= 1)
+//            throw new VerificationException("Wrong Block no POW txs " + toString());
+//            // TODO Validate POW
+//            return;
+////            throw new VerificationException("Wrong Block no POS stake " + toString());
+//        }
+
+        // TODO instantX transaction scanning
+
+//    	const CTxOut& txout = vtx[1].vout[1];
+        if (getHash().equals(params.genesisBlock.getHash()))
+            if (blockSig.length <= 0)
+                throw new VerificationException("BlockSig for POW");
+            else
+                return;
+
+        TransactionOutput txout = transactions.get(1).getOutput(1);
+        byte[] pubKey = getPubKey(transactions);
+
+        //
+        // Solver - Return public keys
+        ECDSASignature decodedSignature = ECDSASignature.decodeFromDER(blockSig);
+        if (!decodedSignature.isCanonical())
+            throw new VerificationException("Is not Canonical");
+        boolean genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, pubKey);
+//    	genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, scriptPubKey.getPubKey());
+        if (!genuine) {
+            log.info("decoded blocksig " + decodedSignature);
+            log.info("blockSig " + Utils.HEX.encode(blockSig));
+            log.info("pubkey " + Utils.HEX.encode(pubKey));
+            throw new VerificationException("Wrong Block signature");
+        }
+    }
+    	
+    private byte[] getPubKey(List<Transaction> tx) {
+    	//vtx[1].vout[1].scriptPubKey
+		return tx.get(1).getOutput(1).getScriptPubKey().getPubKey();
+	}
+
+	private boolean proveStake(List<Transaction> blockTransactions) {
+    	// (vtx.size() > 1 && vtx[1].IsCoinStake());
+    	return blockTransactions.size() > 1 && blockTransactions.get(1).isCoinStake();
+	}
+
+//	private Sha256Hash calculateScryptHash() {
+//    	try {
+//            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+//            writeHeader(bos);
+//            return new Sha256Hash(Utils.reverseBytes(scryptDigest(bos.toByteArray())));
+//        } catch (IOException e) {
+//            throw new RuntimeException(e); // Cannot happen.
+//        }
+//	}
+    
+    public Sha256Hash getNextBlockHash() {
+		return nextBlockHash;
+	}
+
+	public void setNextBlockHash(Sha256Hash nextBlockHash) {
+		this.nextBlockHash = nextBlockHash;
+	}
+
+	public Sha256Hash getStakeHashProof() {
+		return stakeHashProof;
+	}
+
+	public void setStakeHashProof(Sha256Hash stakeHashProof) {
+		this.stakeHashProof = stakeHashProof;
+	}
+	
+	public boolean isStake() {
+		return isStake;
+	}
+
+	public void setStake(boolean isStake) {
+		this.isStake = isStake;
+	}
+
+	public long getStakeTime() {
+		return stakeTime;
+	}
+
+	public void setStakeTime(long stakeTime) {
+		this.stakeTime = stakeTime;
+	}
+
+	public long getStakeModifier() {
+		return stakeModifier;
+	}
+
+	public void setStakeModifier(long stakeModifier) {
+		this.stakeModifier = stakeModifier;
+	}
+	
+	public Sha256Hash getStakeModifier2() {
+		return stakeModifier2;
+	}
+
+	public void setStakeModifier2(Sha256Hash stakeModifier22) {
+		this.stakeModifier2 = stakeModifier22;
+	}
+
+	public long getEntropyBit() {
+		return entropyBit;
+	}
+
+	public void setEntropyBit(long entropyBit) {
+		this.entropyBit = entropyBit;
+	}
+
+	public boolean isGeneratedStakeModifier() {
+		return generatedStakeModifier;
+	}
+
+	public void setGeneratedStakeModifier(boolean generatedStakeModifier) {
+		this.generatedStakeModifier = generatedStakeModifier;
+	}
+
+	public byte[] getSignature() {
+		return signature;
+	}
+
+	public void setSignature(byte[] signature) {
+		this.signature = signature;
+	}
 
     /**
      * Returns whether this block conforms to
@@ -1120,4 +1416,17 @@ public class Block extends Message {
     public boolean isBIP65() {
         return version >= BLOCK_VERSION_BIP65;
     }
+
+    @VisibleForTesting
+    boolean isMasterNodeVotesBytesValid() {
+        return masterNodeVotesBytesValid;
+    }
+
+    boolean shouldHaveMasterNodeVotes() {
+        if(getParams().getId().equals(CoinDefinition.ID_MAINNET))
+            return (getTimeSeconds() > START_MASTERNODE_PAYMENTS/* && getTimeSeconds() < START_MASTERNODE_PAYMENTS_STOP*/);
+        else
+            return getTimeSeconds() > START_MASTERNODE_PAYMENTS_TESTNET;
+    }
+
 }

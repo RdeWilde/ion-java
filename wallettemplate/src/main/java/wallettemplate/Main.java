@@ -119,6 +119,9 @@ public class Main extends Application {
                 // Don't make the user wait for confirmations for now, as the intention is they're sending it
                 // their own money!
                 bitcoin.wallet().allowSpendingUnconfirmedTransactions();
+                //if (params != RegTestParams.get())
+                //    bitcoin.peerGroup().setMaxConnections(11);
+                // TODO bitcoin.peerGroup().setBloomFilterFalsePositiveRate(0.00001);
                 Platform.runLater(controller::onBitcoinSetup);
             }
         };

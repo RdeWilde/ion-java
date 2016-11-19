@@ -762,7 +762,7 @@ public class WalletTool {
             case BLOCK:
                 peers.addEventListener(new AbstractPeerEventListener() {
                     @Override
-                    public void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
+                    public void onBlocksDownloaded(Peer peer, Block block, int blocksLeft) {
                         // Check if we already ran. This can happen if a block being received triggers download of more
                         // blocks, or if we receive another block whilst the peer group is shutting down.
                         if (latch.getCount() == 0) return;
@@ -817,10 +817,7 @@ public class WalletTool {
             System.out.println("Chain file is missing so clearing transactions from the wallet.");
             reset();
         }
-        if (mode == ValidationMode.SPV) {
-            store = new SPVBlockStore(params, chainFileName);
-            chain = new BlockChain(params, wallet, store);
-        } else if (mode == ValidationMode.FULL) {
+        if (mode == ValidationMode.FULL) {
             FullPrunedBlockStore s = new H2FullPrunedBlockStore(params, chainFileName.getAbsolutePath(), 5000);
             store = s;
             chain = new FullPrunedBlockChain(params, wallet, s);

@@ -18,14 +18,8 @@ package org.bitcoinj.params;
 
 import java.math.BigInteger;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.slf4j.Logger;
@@ -38,7 +32,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     /**
      * Scheme part for Bitcoin URIs.
      */
-    public static final String BITCOIN_SCHEME = "bitcoin";
+    public static final String BITCOIN_SCHEME = CoinDefinition.coinURIScheme;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractBitcoinNetParams.class);
 
@@ -57,54 +51,11 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-    	final BlockStore blockStore) throws VerificationException, BlockStoreException {
-        Block prev = storedPrev.getHeader();
-
-        // Is this supposed to be a difficulty transition point?
-        if (!isDifficultyTransitionPoint(storedPrev)) {
-
-            // No ... so check the difficulty didn't actually change.
-            if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
-                throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
-                        ": " + Long.toHexString(nextBlock.getDifficultyTarget()) + " vs " +
-                        Long.toHexString(prev.getDifficultyTarget()));
-            return;
-        }
-
-        // We need to find a block far back in the chain. It's OK that this is expensive because it only occurs every
-        // two weeks after the initial block chain download.
-        long now = System.currentTimeMillis();
-        StoredBlock cursor = blockStore.get(prev.getHash());
-        for (int i = 0; i < this.getInterval() - 1; i++) {
-            if (cursor == null) {
-                // This should never happen. If it does, it means we are following an incorrect or busted chain.
-                throw new VerificationException(
-                        "Difficulty transition point but we did not find a way back to the genesis block.");
-            }
-            cursor = blockStore.get(cursor.getHeader().getPrevBlockHash());
-        }
-        long elapsed = System.currentTimeMillis() - now;
-        if (elapsed > 50)
-            log.info("Difficulty transition traversal took {}msec", elapsed);
-
-        Block blockIntervalAgo = cursor.getHeader();
-        int timespan = (int) (prev.getTimeSeconds() - blockIntervalAgo.getTimeSeconds());
-        // Limit the adjustment step.
-        final int targetTimespan = this.getTargetTimespan();
-        if (timespan < targetTimespan / 4)
-            timespan = targetTimespan / 4;
-        if (timespan > targetTimespan * 4)
-            timespan = targetTimespan * 4;
-
-        BigInteger newTarget = Utils.decodeCompactBits(prev.getDifficultyTarget());
-        newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
-        newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
-
-        if (newTarget.compareTo(this.getMaxTarget()) > 0) {
-            log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
-            newTarget = this.getMaxTarget();
-        }
-
+        	final BlockStore blockStore) throws VerificationException, BlockStoreException {
+    	verifyDifficulty(getNextTargetRequired(storedPrev, blockStore), nextBlock);
+    }
+    
+    public void verifyDifficulty(BigInteger newTarget, Block nextBlock) {
         int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
         long receivedTargetCompact = nextBlock.getDifficultyTarget();
 
@@ -116,7 +67,58 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
         if (newTargetCompact != receivedTargetCompact)
             throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
                     newTargetCompact + " vs " + receivedTargetCompact);
-    }
+      }
+      
+    @Override  
+    public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore) throws BlockStoreException {
+  		boolean isTestnet = !getId().equals(ID_MAINNET);
+        BigInteger targetLimit = isTestnet ? CoinDefinition.testnetProofOfWorkLimit : CoinDefinition.proofOfWorkLimit;
+  		
+  		Block prevBlock = pindexLast.getHeader();		
+
+  		StoredBlock storedPrevPrev = blockStore.get(prevBlock.getPrevBlockHash());
+  		Block prevPrevBlock = storedPrevPrev.getHeader();	
+
+  	    int targetSpacing = CoinDefinition.targetSpacing2;
+  	    
+  	    //int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
+  	    int actualSpacing = (int) (prevBlock.getTimeSeconds() - prevPrevBlock.getTimeSeconds());
+  	    
+  	    if  (pindexLast.getHeight() > CoinDefinition.protocolV1RetargetingFixed) {
+  	    	if (actualSpacing < 0)
+  		    	actualSpacing = targetSpacing;
+  	    }
+  	    
+  	    //nTime > 1444028400;
+  	    if (pindexLast.getHeader().getTimeSeconds() > CoinDefinition.txTimeProtocolV3) {
+  	        if (actualSpacing > targetSpacing * 10)
+  	        	actualSpacing = targetSpacing * 10;
+  	    }	    
+  	    
+  	    // ppcoin: target change every block
+  	    // ppcoin: retarget with exponential moving toward target spacing	  
+  	    // int64_t nInterval = nTargetTimespan / nTargetSpacing;
+  	    int interval = CoinDefinition.targetTimespan / targetSpacing;
+  	    //bnNew.SetCompact(pindexPrev->nBits);
+  	    BigInteger newDifficulty = Utils.decodeCompactBits(prevBlock.getDifficultyTarget());
+  	   
+  	    
+  	    //bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+  	    //bnNew /= ((nInterval + 1) * nTargetSpacing);
+  	    int multiplier = ((interval - 1) * targetSpacing + actualSpacing + actualSpacing);
+  	    int divider = ((interval + 1)  * targetSpacing);
+          newDifficulty = newDifficulty.multiply(BigInteger.valueOf(multiplier));
+          newDifficulty = newDifficulty.divide(BigInteger.valueOf(divider));
+          
+  		if (newDifficulty.compareTo(BigInteger.ZERO) <= 0 
+  			|| newDifficulty.compareTo(targetLimit) > 0){
+  			return targetLimit;
+  		}
+  	    	
+  		else
+  			return newDifficulty;
+  	    
+  	}
 
     @Override
     public Coin getMaxMoney() {

@@ -32,20 +32,41 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
     public UnitTestParams() {
         super();
         id = ID_UNITTESTNET;
-        packetMagic = 0x0b110907;
-        addressHeader = 111;
-        p2shHeader = 196;
+//        packetMagic = 0x0b110907;
+//        addressHeader = 111;
+//        p2shHeader = 196;
+//        acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
+//        maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+//        genesisBlock.setTime(System.currentTimeMillis() / 1000);
+//        genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
+//        //genesisBlock.solve();
+//        port = 18333;
+//        interval = 10;
+//        dumpedPrivateKeyHeader = 239;
+//        targetTimespan = 200000000;  // 6 years. Just a very big number.
+//        spendableCoinbaseDepth = 5;
+//        subsidyDecreaseBlockCount = 100;
+//        dnsSeeds = null;
+//        addrSeeds = null;
+//        bip32HeaderPub = 0x043587CF;
+//        bip32HeaderPriv = 0x04358394;
+        packetMagic = 0xfabfb5daL;
+
+        port = CoinDefinition.testPort;
+        addressHeader = CoinDefinition.testnetAddressHeader;
+        p2shHeader = CoinDefinition.testnetp2shHeader;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
-        genesisBlock.setTime(System.currentTimeMillis() / 1000);
-        genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
-        genesisBlock.solve();
-        port = 18333;
-        interval = 10;
+        interval = INTERVAL;
+        targetTimespan = TARGET_TIMESPAN;
+        maxTarget = CoinDefinition.maxTarget; // TODO Utils.decodeCompactBits(0x1d0fffffL);
         dumpedPrivateKeyHeader = 239;
-        targetTimespan = 200000000;  // 6 years. Just a very big number.
-        spendableCoinbaseDepth = 5;
-        subsidyDecreaseBlockCount = 100;
+        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
+        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
+        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
+        String genesisHash = genesisBlock.getHashAsString();
+        // TODO checkState(genesisHash.equals("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
         dnsSeeds = null;
         addrSeeds = null;
         bip32HeaderPub = 0x043587CF;

@@ -75,6 +75,11 @@ public class DefaultRiskAnalysisTest {
         DefaultRiskAnalysis analysis = DefaultRiskAnalysis.FACTORY.create(wallet, tx, NO_DEPS);
         assertEquals(RiskAnalysis.Result.OK, analysis.analyze());
         assertNull(analysis.getNonFinal());
+        // Verify we can't re-use a used up risk analysis.
+        try {
+            analysis.analyze();
+            fail();
+        } catch (IllegalStateException e) {}
 
         // Set a sequence number on the input to make it genuinely non-final. Verify it's risky.
         input.setSequenceNumber(TransactionInput.NO_SEQUENCE - 1);

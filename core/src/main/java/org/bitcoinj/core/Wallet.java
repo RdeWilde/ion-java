@@ -1635,6 +1635,29 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         // in that function for an explanation of why).
     }
 
+    public void receiveLock(Transaction tx) throws VerificationException {
+        // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionLockRelevant
+        // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
+        // spend against one of our other pending transactions.
+        lock.lock();
+        try {
+            tx.verify();
+
+            Transaction lockedTx = pending.get(tx.getHash());
+            //lockedTx.getConfidence().setConfidenceType(ConfidenceType.INSTANTX_LOCKED);
+            confidenceChanged.put(lockedTx, TransactionConfidence.Listener.ChangeReason.TYPE);
+
+            //TODO:  this is causing problems later, the transaction doesn't get setAppearedInBlock, etc, Wallet crashes.
+            //unspent.put(lockedTx.getHash(), lockedTx);
+            //pending.remove(lockedTx);
+
+        } finally {
+            lock.unlock();
+        }
+        // maybeRotateKeys() will ignore pending transactions so we don't bother calling it here (see the comments
+        // in that function for an explanation of why).
+    }
+
     /**
      * Given a transaction and an optional list of dependencies (recursive/flattened), returns true if the given
      * transaction would be rejected by the analyzer, or false otherwise. The result of this call is independent
@@ -1690,6 +1713,32 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
                 log.debug("Received tx we already saw in a block or created ourselves: " + tx.getHashAsString());
                 return false;
             }
+            // We only care about transactions that:
+            //   - Send us coins
+            //   - Spend our coins
+            if (!isTransactionRelevant(tx)) {
+                log.debug("Received tx that isn't relevant to this wallet, discarding.");
+                return false;
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean isPendingTransactionLockRelevant(Transaction tx) throws ScriptException {
+        lock.lock();
+        try {
+            boolean hasPendingTxLockRequest = getPendingTransactions().contains(tx);
+            if(!hasPendingTxLockRequest)
+                return false;
+            // Ignore it if we already know about this transaction. Receiving a pending transaction never moves it
+            // between pools.
+            /*EnumSet<Pool> containingPools = getContainingPools(tx);
+            if (!containingPools.equals(EnumSet.noneOf(Pool.class))) {
+                log.debug("Received tx we already saw in a block or created ourselves: " + tx.getHashAsString());
+                return false;
+            }*/
             // We only care about transactions that:
             //   - Send us coins
             //   - Spend our coins
@@ -1942,7 +1991,17 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
                 if (ignoreNextNewBlock.contains(tx.getHash())) {
                     // tx was already processed in receive() due to it appearing in this block, so we don't want to
                     // increment the tx confidence depth twice, it'd result in miscounting.
-                    ignoreNextNewBlock.remove(tx.getHash());
+                    ignoreNextNewBlock.remove(tx.getHash()); // TODO
+//                } else if (tx.getConfidence().getConfidenceType() == ConfidenceType.BUILDING) {
+//                    tx.getConfidence().incrementDepthInBlocks();
+//                    confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
+//                } else if(tx.getConfidence().getConfidenceType() == ConfidenceType.INSTANTX_LOCKED) {
+//                    int newDepth = tx.getConfidence().getDepthInBlocks() + 1;
+//                    tx.getConfidence().incrementDepthInBlocks();
+//                    if(newDepth > 6)
+//                    {
+//                        tx.getConfidence().setConfidenceType(ConfidenceType.BUILDING);
+//                        confidenceChanged.put(tx, TransactionConfidence.Listener.Chan
                 } else {
                     TransactionConfidence confidence = tx.getConfidence();
                     if (confidence.getConfidenceType() == ConfidenceType.BUILDING) {
@@ -2030,6 +2089,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
      *
      * <p>It can be called in two contexts. One is when we receive a transaction on the best chain but it wasn't pending,
      * this most commonly happens when we have a set of keys but the wallet transactions were wiped and we are catching
+     * up with the block chain. It can also happen if a block includes a transaction we never saw at broadcast genesisBlockTime.
      * up with the block chain. It can also happen if a block includes a transaction we never saw at broadcast time.
      * If this tx double spends, it takes precedence over our pending transactions and the pending tx goes dead.</p>
      *
@@ -2231,9 +2291,13 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             // Add to the pending pool. It'll be moved out once we receive this transaction on the best chain.
             // This also registers txConfidenceListener so wallet listeners get informed.
             log.info("->pending: {}", tx.getHashAsString());
-            tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+            if(tx instanceof TransactionLockRequest) //TODO:InstantX
+                tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+            //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
-            addWalletTransaction(Pool.PENDING, tx);
+            /*if(tx instanceof TransactionLockRequest)  //TODO:InstantX
+                addWalletTransaction(Pool.INSTANTX_PENDING, tx);
+            else*/ addWalletTransaction(Pool.PENDING, tx);
             // Mark any keys used in the outputs as "used", this allows wallet UI's to auto-advance the current key
             // they are showing to the user in qr codes etc.
             markKeysAsUsed(tx);
@@ -2254,6 +2318,11 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             }
 
             isConsistentOrThrow();
+            //Dash Specific
+            if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
+                context.instantx.mapTxLockReq.put(tx.getHash(), tx);
+                context.instantx.createNewLock((TransactionLockRequest)tx);
+            }
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
@@ -2461,12 +2530,14 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         transactions.put(tx.getHash(), tx);
         switch (pool) {
         case UNSPENT:
+            //case INSTANTX_LOCKED:
             checkState(unspent.put(tx.getHash(), tx) == null);
             break;
         case SPENT:
             checkState(spent.put(tx.getHash(), tx) == null);
             break;
         case PENDING:
+        //case INSTANTX_PENDING:
             checkState(pending.put(tx.getHash(), tx) == null);
             break;
         case DEAD:
@@ -2547,8 +2618,10 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             switch (pool) {
                 case UNSPENT:
                     return unspent;
+                //case INSTANTX_LOCKED:
                 case SPENT:
                     return spent;
+                //case INSTANTX_PENDING:
                 case PENDING:
                     return pending;
                 case DEAD:
@@ -3339,6 +3412,8 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
         // Tracks if this has been passed to wallet.completeTx already: just a safety check.
         private boolean completed;
+
+        public boolean useInstantX = false;
 
         private SendRequest() {}
 
@@ -4381,7 +4456,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
      * Used by {@link Peer} to decide whether or not to discard this block and any blocks building upon it, in case
      * the Bloom filter used to request them may be exhausted, that is, not have sufficient keys in the deterministic
      * sequence within it to reliably find relevant transactions.
-     */
+     
     public boolean checkForFilterExhaustion(FilteredBlock block) {
         keychainLock.lock();
         try {
@@ -4398,7 +4473,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         } finally {
             keychainLock.unlock();
         }
-    }
+    }*/
 
     //endregion
 

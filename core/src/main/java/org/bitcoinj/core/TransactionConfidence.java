@@ -20,6 +20,7 @@ package org.bitcoinj.core;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import org.bitcoinj.utils.*;
+import org.darkcoinj.InstantXSystem;
 
 import javax.annotation.*;
 import java.io.*;
@@ -181,6 +182,12 @@ public class TransactionConfidence implements Serializable {
              * is considered relayable and has thus reached the miners.
              */
             SEEN_PEERS,
+            /**
+             * Occurs when the type returned by {@link org.bitcoinj.core.TransactionConfidence#getIXType()}
+             * has changed. For example, if a IX_REQUEST transaction changes to IX_LOCKED, then this reason will
+             * be given.
+             */
+            IX_TYPE,
         }
         void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason);
     }
@@ -339,6 +346,15 @@ public class TransactionConfidence implements Serializable {
                         getAppearedAtChainHeight(), getDepthInBlocks()));
                 break;
         }
+        switch(getIXType())
+        {
+            case IX_LOCKED:
+                builder.append("  IX Locked.");
+                break;
+            case IX_REQUEST:
+                builder.append("  IX Requested");
+                break;
+        }
         return builder.toString();
     }
 
@@ -485,4 +501,24 @@ public class TransactionConfidence implements Serializable {
     public Sha256Hash getTransactionHash() {
         return hash;
     }
+
+    //Dash Specific Additions
+    public enum IXType {
+        IX_NONE,
+        IX_REQUEST,
+        IX_LOCKED
+    };
+
+    IXType ixType = IXType.IX_NONE;
+
+    public void setIXType(IXType ixType) {
+        this.ixType = ixType;
+    }
+
+    public IXType getIXType() {
+        return ixType;
+    }
+
+    public boolean isIX() { return ixType != IXType.IX_NONE; }
+    public boolean isTransactionLocked() { return ixType == IXType.IX_LOCKED; }
 }

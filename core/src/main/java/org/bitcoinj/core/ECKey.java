@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.crypto.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -661,6 +662,21 @@ public class ECKey implements EncryptableItem {
         }
         return doSign(input, priv);
     }
+    
+    public ECDSASignature signReversed(Sha256Hash input) throws KeyCrypterException {
+        if (priv == null)
+            throw new MissingPrivateKeyException();
+        return doSignReversed(input, priv);
+    }
+    
+    protected ECDSASignature doSignReversed(Sha256Hash input, BigInteger privateKeyForSigning) {
+        checkNotNull(privateKeyForSigning);
+        ECDSASigner signer = new ECDSASigner(new HMacDSAKCalculator(new SHA256Digest()));
+        ECPrivateKeyParameters privKey = new ECPrivateKeyParameters(privateKeyForSigning, CURVE);
+        signer.init(true, privKey);
+        BigInteger[] components = signer.generateSignature(Utils.reverseBytes(input.getBytes()));
+        return new ECDSASignature(components[0], components[1]).toCanonicalised();
+    }
 
     protected ECDSASignature doSign(Sha256Hash input, BigInteger privateKeyForSigning) {
         if (FAKE_SIGNATURES)
@@ -902,6 +918,34 @@ public class ECKey implements EncryptableItem {
             throw new SignatureException("Could not recover public key from signature");
         return key;
     }
+    public static ECKey signedMessageToKey(byte [] message, byte [] signatureEncoded) throws SignatureException {
+
+        // Parse the signature bytes into r/s and the selector value.
+        if (signatureEncoded.length < 65)
+            throw new SignatureException("Signature truncated, expected 65 bytes and got " + signatureEncoded.length);
+        int header = signatureEncoded[0] & 0xFF;
+        // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
+        //                  0x1D = second key with even y, 0x1E = second key with odd y
+        if (header < 27 || header > 34)
+            throw new SignatureException("Header byte out of range: " + header);
+        BigInteger r = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 1, 33));
+        BigInteger s = new BigInteger(1, Arrays.copyOfRange(signatureEncoded, 33, 65));
+        ECDSASignature sig = new ECDSASignature(r, s);
+        byte[] messageBytes = Utils.formatMessageForSigning(message);
+        // Note that the C++ code doesn't actually seem to specify any character encoding. Presumably it's whatever
+        // JSON-SPIRIT hands back. Assume UTF-8 for now.
+        Sha256Hash messageHash = Sha256Hash.twiceOf(messageBytes);
+        boolean compressed = false;
+        if (header >= 31) {
+            compressed = true;
+            header -= 4;
+        }
+        int recId = header - 27;
+        ECKey key = ECKey.recoverFromSignature(recId, sig, messageHash, compressed);
+        if (key == null)
+            throw new SignatureException("Could not recover public key from signature");
+        return key;
+    }
 
     /**
      * Convenience wrapper around {@link ECKey#signedMessageToKey(String, String)}. If the key derived from the
@@ -912,7 +956,11 @@ public class ECKey implements EncryptableItem {
         if (!key.pub.equals(pub))
             throw new SignatureException("Signature did not match for message");
     }
-
+    public void verifyMessage(byte [] message, byte [] signatureEncoded) throws SignatureException {
+        ECKey key = ECKey.signedMessageToKey(message, signatureEncoded);
+        if (!key.pub.equals(pub))
+            throw new SignatureException("Signature did not match for message");
+    }
     /**
      * <p>Given the components of a signature and a selector value, recover and return the public key
      * that generated the signature according to the algorithm in SEC1v2 section 4.1.6.</p>
@@ -1258,4 +1306,6 @@ public class ECKey implements EncryptableItem {
             builder.append("\n");
         }
     }
+
+	
 }
