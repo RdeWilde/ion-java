@@ -418,9 +418,9 @@ public abstract class AbstractBlockChain {
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
                 params.checkDifficultyTransitions(storedPrev, block, blockStore);
                 //TODO consider moving to params.
-                if (block.isStake()) { // TODO valid here?
-                    setCheckBlackCoinStake(storedPrev, block);
-                }
+                //if (block.isStake()) { // TODO valid here?
+                    //setCheckBlackCoinStake(storedPrev, block); // TODO only if full blockchain
+                //}
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 
@@ -432,9 +432,26 @@ public abstract class AbstractBlockChain {
             lock.unlock();
         }
     }
+    // TODO move to block or blockstore?
+    public StoredBlock getPrevBlock(StoredBlock currentBlock, boolean isCoinstake, final BlockStore blockStore) throws BlockStoreException {
+        StoredBlock prevBlock = currentBlock.getPrev(blockStore);
+        while (prevBlock != null
+            && prevBlock.getHeader() != null
+        ) {
+            if (prevBlock.getHeight() == 0 || (prevBlock.getHeader() != null && prevBlock.getHeader().isStake() == isCoinstake))
+                break;// TODO testnetGenesishash
 
+            prevBlock = prevBlock.getPrev(blockStore);
+        }
+
+        return prevBlock;
+    }
     private void setCheckBlackCoinStake(StoredBlock storedPrev, Block newBlock) throws BlockStoreException{
     	if(newBlock.getPrevBlockHash().equals(storedPrev.getHeader().getHash())){
+//            if (storedPrev.getHeader().isStake() != newBlock.isStake()) {
+//                storedPrev = getPrevBlock(storedPrev, newBlock.isStake(), blockStore);
+//            }
+
 			this.blackStake.setBlackCoinStake(storedPrev, newBlock);
 			Sha256Hash stakeHashProof = checkAndSetPOS(storedPrev, newBlock);
 			newBlock.setStakeHashProof(stakeHashProof);

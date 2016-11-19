@@ -123,6 +123,9 @@ public class StoredBlock implements Serializable {
      * @return the previous block in the chain or null if it was not found in the store.
      */
     public StoredBlock getPrev(BlockStore store) throws BlockStoreException {
+        if (getHeader().getHash().equals(getHeader().getPrevBlockHash()))
+            return null;
+
         return store.get(getHeader().getPrevBlockHash());
     }
 

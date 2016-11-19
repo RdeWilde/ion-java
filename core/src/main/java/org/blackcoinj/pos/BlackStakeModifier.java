@@ -18,10 +18,11 @@ public class BlackStakeModifier {
 	public void setBlackCoinStake(StoredBlock prevBlock, Block newBlock) throws BlockStoreException {
     	// GetBlockTrust (const)
     	//setChainTrust(prevBlock, newBlock);
+		setStakeEntropyBit(newBlock);
 
 		// https://github.com/ionomy/ion/blob/130a765b94bbf1a7e0fd3005221211aeed08b889/src/main.cpp#L2306
     	//ComputeStakeModifierV2(pindexNew->pprev, IsProofOfWork() ? hash : vtx[1].vin[0].prevout.hash);
-    	Sha256Hash stakeModifier2 = computeStakeModifierV2(prevBlock, newBlock.isStake() ? newBlock.getTransactions().get(0).getInput(0).getOutpoint().getHash() : newBlock.getHash());
+    	Sha256Hash stakeModifier2 = computeStakeModifierV2(prevBlock, newBlock.isStake() ? newBlock.getTransactions().get(1).getInput(0).getOutpoint().getHash() : newBlock.getHash());
     		
 	    newBlock.setStakeModifier2(stakeModifier2);
     	//
@@ -35,7 +36,9 @@ public class BlackStakeModifier {
 	}
 
 	private Sha256Hash computeStakeModifierV2(StoredBlock prevBlock, Sha256Hash kernel) throws BlockStoreException {
-		
+		if (prevBlock == null || prevBlock.getHeader() == null || prevBlock.getHeader().getStakeModifier2() == null)
+			return Sha256Hash.ZERO_HASH;
+
 		ByteArrayOutputStream ssStakeStream = new UnsafeByteArrayOutputStream(32+32);
 		byte[] stakeModifier2 = prevBlock.getHeader().getStakeModifier2().getBytes();
 		try {
@@ -52,7 +55,7 @@ public class BlackStakeModifier {
 				e.printStackTrace();
 			}
 		}
-		return Sha256Hash.wrapReversed(Sha256Hash.hashTwice((ssStakeStream.toByteArray())));
+		return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(ssStakeStream.toByteArray())); // TODO check
 	}
 
 }

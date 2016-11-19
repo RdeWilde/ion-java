@@ -17,11 +17,13 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.*;
 
+import java.math.BigInteger;
 import java.util.Date;
 
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -39,7 +41,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         packetMagic = CoinDefinition.testnetPacketMagic;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = CoinDefinition.proofOfWorkLimit;
+        maxTarget = Utils.decodeCompactBits(CoinDefinition.testnetGenesisBlockDifficultyTarget);
         port = CoinDefinition.testPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
         p2shHeader = CoinDefinition.testnetp2shHeader;
@@ -75,7 +77,125 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     }
 
     // February 16th 2012
-    private static final Date testnetDiffDate = new Date(1329264000000L);
+    //private static final Date testnetDiffDate = new Date(1329264000000L);
+
+
+    @Override
+    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
+                                           final BlockStore blockStore) throws VerificationException, BlockStoreException {
+        // TODO FIXME verifyDifficulty(getNextTargetRequired(storedPrev, blockStore, nextBlock.isStake()), nextBlock);
+    }
+
+
+    // TODO move to block or blockstore?
+    public StoredBlock getPrevBlock(StoredBlock currentBlock, boolean isCoinstake, final BlockStore blockStore) throws BlockStoreException {
+        if (currentBlock.getHeader() != null && currentBlock.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            return currentBlock;
+        }
+
+        StoredBlock prevBlock = currentBlock.getPrev(blockStore);
+        while (prevBlock != null && prevBlock.getHeader() != null && !prevBlock.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH)) {
+            if (prevBlock.getHeader() != null && prevBlock.getHeader().isStake() == isCoinstake)
+                return prevBlock;
+
+            prevBlock = prevBlock.getPrev(blockStore);
+        }
+
+        return prevBlock;
+    }
+
+
+    public BigInteger getProofOfStakeLimit(int nHeight) {
+        // Always v2
+        if (!getId().equals(ID_MAINNET))
+            return CoinDefinition.testnetProofOfStakeLimit;
+
+        return CoinDefinition.proofOfStakeLimit;
+    }
+
+
+    @Override
+    public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore) throws BlockStoreException {
+        return this.getNextTargetRequired(pindexLast, blockStore, false);
+    }
+
+
+    public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore, final boolean isCoinstake) throws BlockStoreException {
+
+        boolean isTestnet = !getId().equals(ID_MAINNET); // TODO testnet vs mainnet
+        BigInteger targetLimit = !isCoinstake  ? (isTestnet ? CoinDefinition.testnetProofOfWorkLimit : CoinDefinition.proofOfWorkLimit) : getProofOfStakeLimit(pindexLast.getHeight()); // TODO testnet vs mainnet
+        // TODO mainnet has diff limit for work vs stake?
+
+
+
+//  		StoredBlock storedPrevPrev = blockStore.get(prevBlock.getPrevBlockHash());
+//  		Block prevPrevBlock = storedPrevPrev.getHeader();
+
+//        Block lastBlock = pindexLast.getHeader();
+//        if (lastBlock.isStake() != isCoinstake)
+//            if ((pindexLast = getPrevBlock(pindexLast, isCoinstake, blockStore)) != null)
+//                lastBlock = pindexLast.getHeader();
+// TODO FIXME NullException
+//        java.lang.NullPointerException: Attempt to invoke virtual method 'int org.bitcoinj.core.StoredBlock.getHeight()' on a null object reference
+//        at org.bitcoinj.params.TestNet3Params.getNextTargetRequired(TestNet3Params.java:125) ~[na:0.0]
+//        at org.bitcoinj.params.TestNet3Params.checkDifficultyTransitions(TestNet3Params.java:86) ~[na:0.0]
+//        at org.bitcoinj.core.AbstractBlockChain.add(AbstractBlockChain.java:419) ~[na:0.0]
+
+        if (pindexLast != null && pindexLast.getHeader().isStake() != isCoinstake)
+            pindexLast = getPrevBlock(pindexLast, isCoinstake, blockStore);
+
+        if (pindexLast == null || pindexLast.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+            return targetLimit;
+
+        StoredBlock storedPrev = getPrevBlock(pindexLast, isCoinstake, blockStore);
+
+        if (storedPrev == null || storedPrev.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+            return targetLimit;
+
+        StoredBlock storedPrevPrev = getPrevBlock(storedPrev, isCoinstake, blockStore);
+
+//        if (storedPrevPrev == null || storedPrevPrev.getHeader().getPrevBlockHash().equals(Sha256Hash.ZERO_HASH))
+//            return targetLimit;
+
+        int targetSpacing = CoinDefinition.targetSpacing2;
+
+        //int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
+        long actualSpacing = (pindexLast.getHeader().getTimeSeconds() - storedPrev.getHeader().getTimeSeconds());
+
+        if  (pindexLast.getHeight() > CoinDefinition.protocolV1RetargetingFixed || isTestnet) {
+            if (actualSpacing < 0)
+                actualSpacing = targetSpacing;
+        }
+
+        //nTime > 1444028400;
+        if (pindexLast.getHeader().getTimeSeconds() > CoinDefinition.txTimeProtocolV3 || isTestnet) {
+            if (actualSpacing > targetSpacing * 10)
+                actualSpacing = targetSpacing * 10;
+        }
+
+        // ppcoin: target change every block
+        // ppcoin: retarget with exponential moving toward target spacing
+        //bnNew.SetCompact(pindexPrev->nBits);
+        BigInteger newDifficulty = Utils.decodeCompactBits(pindexLast.getHeader().getDifficultyTarget());
+
+        // int64_t nInterval = nTargetTimespan / nTargetSpacing;
+        int interval = CoinDefinition.targetTimespan / targetSpacing;
+
+
+        //bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+        //bnNew /= ((nInterval + 1) * nTargetSpacing);
+        long multiplier = ((interval - 1) * targetSpacing + actualSpacing + actualSpacing);
+        long divider = ((interval + 1)  * targetSpacing);
+        newDifficulty = newDifficulty.multiply(BigInteger.valueOf(multiplier));
+        newDifficulty = newDifficulty.divide(BigInteger.valueOf(divider));
+
+        if (newDifficulty.compareTo(BigInteger.ZERO) <= 0
+                || newDifficulty.compareTo(targetLimit) > 0){
+            return targetLimit;
+        }
+        else
+            return newDifficulty;
+    }
 
 //    @Override
 //    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,

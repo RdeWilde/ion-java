@@ -494,7 +494,7 @@ public class PeerGroup implements TransactionBroadcaster {
                 // First run: try and use a local node if there is one, for the additional security it can provide.
                 // But, not on Android as there are none for this platform: it could only be a malicious app trying
                 // to hijack our traffic.
-                if (!Utils.isAndroidRuntime() && useLocalhostPeerWhenPossible && maybeCheckForLocalhostPeer() && firstRun) {
+                if (useLocalhostPeerWhenPossible && maybeCheckForLocalhostPeer() && firstRun) { // (!Utils.isAndroidRuntime() || log.isDebugEnabled()) &&
                     log.info("Localhost peer detected, trying to use it instead of P2P discovery");
                     maxConnections = 0;
                     connectToLocalHost();
@@ -533,7 +533,7 @@ public class PeerGroup implements TransactionBroadcaster {
                 if (inactives.isEmpty()) {
                     if (countConnectedAndPendingPeers() < getMaxConnections()) {
                         log.info("Peer discovery didn't provide us any more peers, will try again later.");
-                        executor.schedule(this, groupBackoff.getRetryTime() - now, TimeUnit.MILLISECONDS);
+                        executor.schedule(this, groupBackoff.getRetryTime() - now, TimeUnit.MILLISECONDS); // TOOD +1000 toegevoegd
                     } else {
                         // We have enough peers and discovery provided no more, so just settle down. Most likely we
                         // were given a fixed set of addresses in some test scenario.
@@ -859,7 +859,7 @@ public class PeerGroup implements TransactionBroadcaster {
             Socket socket = null;
             try {
                 socket = new Socket();
-                socket.connect(new InetSocketAddress(InetAddresses.forString("127.0.0.1"), params.getPort()), vConnectTimeoutMillis);
+                socket.connect(new InetSocketAddress(InetAddresses.forString(CoinDefinition.localNode), params.getPort()), vConnectTimeoutMillis);
                 localhostCheckState = LocalhostCheckState.FOUND;
                 return true;
             } catch (IOException e) {

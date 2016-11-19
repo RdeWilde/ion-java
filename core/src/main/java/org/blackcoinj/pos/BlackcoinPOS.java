@@ -7,25 +7,21 @@ import java.util.List;
 
 import org.bitcoinj.core.*;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.FullPrunedBlockStore;
 
 public class BlackcoinPOS {
-	private static final Logger log = LoggerFactory.getLogger(BlackcoinPOS.class);
 	private FullPrunedBlockStore blockStore;
 
 	public BlackcoinPOS(FullPrunedBlockStore blockStore) {
 		this.blockStore = blockStore;
 	}
 
-	public Sha256Hash checkAndSetPOS(StoredBlock storedPrev, Block newBlock) throws BlockStoreException {
+	public Sha256Hash checkAndSetPOS(StoredBlock storedPrev, Block newBlock) throws BlockStoreException, VerificationException {
 		return checkSetBlackCoinPOS(storedPrev, newBlock);
 	}
 
-	private Sha256Hash checkSetBlackCoinPOS(StoredBlock storedPrev, Block block) throws BlockStoreException {
-
-		// log.info("checkinng proof of stake");
+	private Sha256Hash checkSetBlackCoinPOS(StoredBlock storedPrev, Block block) throws BlockStoreException, VerificationException {
 		List<Transaction> transactions = block.getTransactions();
 		// CheckProofOfStake(pindexPrev, vtx[1], nBits, hashProof,
 		// targetProofOfStake
@@ -34,23 +30,20 @@ public class BlackcoinPOS {
 			throw new VerificationException("The proof-of-stake failed");
 		} else {
 			return stakeKernelHash;
-
-			// log.info("setting stake proof on height " +
-			// newBlock.getHeight());
-			// log.info("stake proof=" + stakeKernelHash);
 		}
 
 	}
 
 	private Sha256Hash checkProofOfStake(StoredBlock storedPrev, Transaction stakeTx, long target)
-			throws BlockStoreException {
+			throws BlockStoreException, VerificationException {
 		// Kernel (input 0) must match the stake hash target per coin age
 		// (nBits)
 		TransactionInput txin = stakeTx.getInputs().get(0);
 		// https://github.com/rat4/blackcoin/blob/a2e518d59d8cded7c3e0acf1f4a0d9b363b46346/src/kernel.cpp#L427
 		// First try finding the previous transaction in database
 		UTXO txPrev = blockStore.getTransactionOutput(txin.getOutpoint().getHash(), txin.getOutpoint().getIndex());
-
+		if (txPrev == null)
+			throw new VerificationException("utxo not found");
 		// CheckStakeKernelHash(pindexPrev, nBits, block, txindex.pos.nTxPos -
 		// txindex.pos.nBlockPos, txPrev,
 		// txin.prevout, tx.nTime, hashProofOfStake, targetProofOfStake,
@@ -63,7 +56,7 @@ public class BlackcoinPOS {
 	}
 
 	public Sha256Hash checkStakeKernelHash(StoredBlock storedPrev, long target, UTXO txPrev, long stakeTxTime,
-			TransactionOutPoint prevout) throws BlockStoreException {
+			TransactionOutPoint prevout) throws BlockStoreException, VerificationException {
 
 		StoredBlock blockFrom = null;
 		// nTimeTx < txPrev.nTime
@@ -115,7 +108,7 @@ public class BlackcoinPOS {
 			hashProofOfStake = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(ssStakeStream.toByteArray()));
 
 		} catch (IOException e) {
-			throw new VerificationException("creating hash in checkStakeKernelHashV2 failed");
+			throw new VerificationException("creating hash in checkStakeKernelHashV2 failed ", e);
 		}
 
 		BigInteger bigNumHashProofOfStake = hashProofOfStake.toBigInteger();

@@ -729,7 +729,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // Check that if we have a localhost port 8333 or 18333 then it's used instead of the p2p network.
         ServerSocket local = null;
         try {
-            local = new ServerSocket(params.getPort(), 100, InetAddresses.forString("127.0.0.1"));
+            local = new ServerSocket(params.getPort(), 100, InetAddresses.forString("10.0.2.2")); // FIXME Coindef.localNode
         }
         catch(BindException e) { // Port already in use, skipping this test.
             return;

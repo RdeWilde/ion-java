@@ -613,8 +613,15 @@ public class Transaction extends ChildMessage implements Serializable {
         maybeParse();
         // ppcoin: the coin stake transaction is marked with the first output empty
         //(vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
-        return (inputs.size() > 0 && (inputs.get(0).getOutpoint() != null)
-                && outputs.size() >=2 && outputs.get(0) == null);
+        boolean bool1 = inputs.size() > 0;
+        boolean bool2 = !inputs.get(0).getOutpoint().isNull();
+        boolean bool3 = outputs.size() >=2;
+        boolean bool4 = outputs.get(0).getValue().isZero();
+
+        return bool1 && bool2 && bool3 && bool4;
+
+//        return (inputs.size() > 0 && (!inputs.get(0).getOutpoint().isNull())
+//                && outputs.size() >=2 && outputs.get(0).getValue().isZero());
     }
 
 

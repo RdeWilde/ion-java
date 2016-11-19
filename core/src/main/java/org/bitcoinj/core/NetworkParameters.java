@@ -127,7 +127,7 @@ public abstract class NetworkParameters implements Serializable {
             // A script containing the difficulty bits and the following message:
             //
             //   "20 Feb 2014 Bitcoin ATMs come to USA"
-        	byte[] bytes = Utils.HEX.decode(CoinDefinition.genesisHash);
+        	byte[] bytes = Utils.HEX.decode(CoinDefinition.testnetGenesisHash);
             t.addInput(new TransactionInput(n, t, bytes));
             ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
             scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
@@ -138,10 +138,17 @@ public abstract class NetworkParameters implements Serializable {
         }
         genesisBlock.addTransaction(t);
         genesisBlock.setPrevBlockHash(Sha256Hash.ZERO_HASH);
-        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
-        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
-        genesisBlock.setDifficultyTarget(CoinDefinition.genesisDifficultyTarget);
-        genesisBlock.setMerkleRoot(Sha256Hash.wrap(CoinDefinition.genesisMerkleRoot));
+        if (n instanceof MainNetParams) { // TODO FIXME inheritanced approach
+            genesisBlock.setTime(CoinDefinition.genesisBlockTime);
+            genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
+            genesisBlock.setMerkleRoot(Sha256Hash.wrap(CoinDefinition.genesisMerkleRoot));
+            genesisBlock.setDifficultyTarget(CoinDefinition.genesisDifficultyTarget);
+        } else {
+            genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime);
+            genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce);
+            genesisBlock.setMerkleRoot(Sha256Hash.wrap(CoinDefinition.genesisMerkleRoot));
+            genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget);
+        }
         genesisBlock.setStakeModifier(0l);
         genesisBlock.setStakeModifier2(Sha256Hash.ZERO_HASH);
         genesisBlock.setEntropyBit(genesisBlock.getHash().toBigInteger().and(BigInteger.ONE).longValue());

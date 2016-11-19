@@ -101,7 +101,7 @@ public class PeerAddress extends ChildMessage {
     }
 
     public static PeerAddress localhost(NetworkParameters params) {
-        return new PeerAddress(InetAddresses.forString("127.0.0.1"), params.getPort());
+        return new PeerAddress(InetAddresses.forString(CoinDefinition.localNode), params.getPort());
     }
 
     @Override

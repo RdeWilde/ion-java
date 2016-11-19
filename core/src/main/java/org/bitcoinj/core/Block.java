@@ -18,6 +18,7 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.core.ECKey.ECDSASignature;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.bitcoinj.core.Coin.FIFTY_COINS;
+import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 //import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
@@ -133,7 +135,7 @@ public class Block extends Message {
         super(params);
         // Set up a few basic things. We are not complete after this though.
         version = 1;
-        difficultyTarget = 0x1d07fff8L;
+        difficultyTarget = params instanceof MainNetParams ? CoinDefinition.genesisDifficultyTarget : CoinDefinition.testnetGenesisBlockDifficultyTarget;
         time = System.currentTimeMillis() / 1000;
         prevBlockHash = Sha256Hash.ZERO_HASH;
 
@@ -158,6 +160,7 @@ public class Block extends Message {
      */
     public Block(NetworkParameters params, byte[] payloadBytes, boolean parseLazy, boolean parseRetain, int length)
             throws ProtocolException {
+
         super(params, payloadBytes, 0, parseLazy, parseRetain, length);
     }
 
@@ -269,7 +272,6 @@ public class Block extends Message {
         if(payload.length != cursor){
         	byte[] blockSig = readByteArray();
             checkBlockSignature(blockSig);
-
         }
         
         // No need to set length here. If length was not provided then it should be set at the end of parseLight().
@@ -1216,77 +1218,93 @@ public class Block extends Message {
     
     private void checkBlockSignature(byte[] blockSig) throws VerificationException {
 
-        if (getHash().equals(Sha256Hash.ZERO_HASH))
+        if (isStake() && getHash().equals(Sha256Hash.ZERO_HASH))
             return;
 
-        if (transactions.isEmpty() || transactions.size() > MAX_BLOCK_SIZE) { // TODO GetSerializeSize main.cpp#2350
-            throw new VerificationException("Wrong Block size limits failed");
-        }
+        // https://github.com/ionomy/ion/blob/130a765b94bbf1a7e0fd3005221211aeed08b889/src/main.cpp#L2852
+        if (!isStake())
+            if (blockSig.length != 0)
+                throw new VerificationException("BlockSig for POW");
+            else
+                return;
 
-        // CheckTimeStamp is in verifyHeader
+        // https://github.com/ionomy/ion/blob/130a765b94bbf1a7e0fd3005221211aeed08b889/src/main.cpp#L2855
+        if (blockSig.length == 0)
+            throw new VerificationException("No blocksig");
 
-        if (transactions == null || transactions.size() == 0 || !transactions.get(0).isCoinBase()) // TODO
-            throw new VerificationException("Wrong Block no coinbase");
-
-        for (int i = 1; i < transactions.size(); i++)
-            if (transactions.get(i).isCoinBase())
-                throw new VerificationException("Wrong Block more than one coinbase");
-
-//        if (transactions.size() >= 1 && transactions.get(1).getOutputs().size() == 0)
+//
+//        if (transactions.isEmpty() || transactions.size() > MAX_BLOCK_SIZE) { // TODO GetSerializeSize main.cpp#2350
+//            throw new VerificationException("Wrong Block size limits failed");
+//        }
+//
+//        // CheckTimeStamp is in verifyHeader
+//
+//        if (transactions == null || transactions.size() == 0 || !transactions.get(0).isCoinBase()) // TODO
+//            throw new VerificationException("Wrong Block no coinbase");
+//
+//        for (int i = 1; i < transactions.size(); i++)
+//            if (transactions.get(i).isCoinBase())
+//                throw new VerificationException("Wrong Block more than one coinbase");
+//
+////        if (transactions.size() >= 1 && transactions.get(1).getOutputs().size() == 0)
+////            return;
+//
+//
+//        if (isStake()) {
+//            if (!proveStake(transactions))
+//                throw new VerificationException("Wrong Block proveStake failed");
+//
+//            if (transactions.get(0).getOutputs().size() != 1 || transactions.get(0).getOutput(0) != null) // TODO output isEmpty
+//                throw new VerificationException("Wrong Block coinbase output empty");
+//
+//            if (transactions.isEmpty() || !transactions.get(1).isCoinStake())
+//                throw new VerificationException("Wrong Block second tx is no coinStake");
+//
+//            for (int i = 2; i < transactions.size(); i++)
+//                if (transactions.get(i).isCoinStake())
+//                    throw new VerificationException("Wrong Block more than one coinstake");
+//        } else {
+////            if (fCheckPOW && !CheckProofOfWork(GetPoWHash(), nBits))
+////                throw new VerificationException("Wrong Block no valid POW " + toString());
+//
+//            if (transactions.size() <= 1)
+//            throw new VerificationException("Wrong Block no POW txs " + toString());
+//            // TODO Validate POW
 //            return;
-
-
-        if (isStake()) {
-            if (!proveStake(transactions))
-                throw new VerificationException("Wrong Block proveStake failed");
-
-            if (transactions.get(0).getOutputs().size() != 1 || transactions.get(0).getOutput(0) != null) // TODO output isEmpty
-                throw new VerificationException("Wrong Block coinbase output empty");
-
-            if (transactions.isEmpty() || !transactions.get(1).isCoinStake())
-                throw new VerificationException("Wrong Block second tx is no coinStake");
-
-            for (int i = 2; i < transactions.size(); i++)
-                if (transactions.get(i).isCoinStake())
-                    throw new VerificationException("Wrong Block more than one coinstake");
-        } else {
-//            if (fCheckPOW && !CheckProofOfWork(GetPoWHash(), nBits))
-//                throw new VerificationException("Wrong Block no valid POW " + toString());
-
-            if (transactions.size() <= 1)
-            throw new VerificationException("Wrong Block no POW txs " + toString());
-            // TODO Validate POW
-            return;
-//            throw new VerificationException("Wrong Block no POS stake " + toString());
-        }
+////            throw new VerificationException("Wrong Block no POS stake " + toString());
+//        }
 
         // TODO instantX transaction scanning
 
 //    	const CTxOut& txout = vtx[1].vout[1];
+        if (getHash().equals(params.genesisBlock.getHash()))
+            if (blockSig.length <= 0)
+                throw new VerificationException("BlockSig for POW");
+            else
+                return;
+
         TransactionOutput txout = transactions.get(1).getOutput(1);
-        Script scriptPubKey = txout.getScriptPubKey();
+        byte[] pubKey = getPubKey(transactions);
 
-//        byte[] pubKey = getPubKey(transactions);
-
-        boolean genuine = false;
         //
         // Solver - Return public keys
         ECDSASignature decodedSignature = ECDSASignature.decodeFromDER(blockSig);
         if (!decodedSignature.isCanonical())
             throw new VerificationException("Is not Canonical");
-//        genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, pubKey);
-    	genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, scriptPubKey.getPubKey());
+        boolean genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, pubKey);
+//    	genuine = ECKey.verify(Utils.reverseBytes(getHash().getBytes()), decodedSignature, scriptPubKey.getPubKey());
         if (!genuine) {
+            log.info("decoded blocksig " + decodedSignature);
             log.info("blockSig " + Utils.HEX.encode(blockSig));
-            log.info("pubkey " + Utils.HEX.encode(scriptPubKey.getPubKey()));
+            log.info("pubkey " + Utils.HEX.encode(pubKey));
             throw new VerificationException("Wrong Block signature");
         }
     }
     	
-//    private byte[] getPubKey(List<Transaction> tx) {
-    	//vtx[1].vout[1].scriptPubKeyvvv
-//		return tx.get(1).getOutput(1).getScriptPubKey().getPubKey();
-//	}
+    private byte[] getPubKey(List<Transaction> tx) {
+    	//vtx[1].vout[1].scriptPubKey
+		return tx.get(1).getOutput(1).getScriptPubKey().getPubKey();
+	}
 
 	private boolean proveStake(List<Transaction> blockTransactions) {
     	// (vtx.size() > 1 && vtx[1].IsCoinStake());

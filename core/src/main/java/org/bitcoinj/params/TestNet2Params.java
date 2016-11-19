@@ -28,7 +28,7 @@ public class TestNet2Params extends AbstractBitcoinNetParams {
     public TestNet2Params() {
         super();
         id = ID_TESTNET;
-        packetMagic = 0xfabfb5daL;
+        packetMagic = CoinDefinition.testnetPacketMagic; // FIXME
 
         port = CoinDefinition.testPort;
         addressHeader = CoinDefinition.testnetAddressHeader;
@@ -36,19 +36,19 @@ public class TestNet2Params extends AbstractBitcoinNetParams {
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = CoinDefinition.maxTarget; // TODO Utils.decodeCompactBits(0x1d0fffffL);
+        maxTarget = CoinDefinition.testnetProofOfWorkLimit; // FIXME TODO Utils.decodeCompactBits(0x1d0fffffL);
         dumpedPrivateKeyHeader = 239;
-        genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d07fff8L);
-        genesisBlock.setNonce(384568319);
+        genesisBlock.setTime(CoinDefinition.testnetGenesisBlockTime); // FIXME
+        genesisBlock.setDifficultyTarget(CoinDefinition.testnetGenesisBlockDifficultyTarget); // FIXME
+        genesisBlock.setNonce(CoinDefinition.testnetGenesisBlockNonce); // FIXME
         spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
         // TODO checkState(genesisHash.equals("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
-        dnsSeeds = null;
+        dnsSeeds = CoinDefinition.testnetDnsSeeds;
         addrSeeds = null;
-        bip32HeaderPub = 0x043587CF;
-        bip32HeaderPriv = 0x04358394;
+        bip32HeaderPub = CoinDefinition.testnetAddressHeader;
+        bip32HeaderPriv = CoinDefinition.p2shHeader;
     }
 
     private static TestNet2Params instance;

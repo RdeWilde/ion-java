@@ -55,7 +55,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     	verifyDifficulty(getNextTargetRequired(storedPrev, blockStore), nextBlock);
     }
     
-    private void verifyDifficulty(BigInteger newTarget, Block nextBlock) {
+    public void verifyDifficulty(BigInteger newTarget, Block nextBlock) {
         int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
         long receivedTargetCompact = nextBlock.getDifficultyTarget();
 
@@ -71,7 +71,8 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
       
     @Override  
     public BigInteger getNextTargetRequired(StoredBlock pindexLast, final BlockStore blockStore) throws BlockStoreException {
-  		BigInteger targetLimit = CoinDefinition.proofOfWorkLimit;
+  		boolean isTestnet = !getId().equals(ID_MAINNET);
+        BigInteger targetLimit = isTestnet ? CoinDefinition.testnetProofOfWorkLimit : CoinDefinition.proofOfWorkLimit;
   		
   		Block prevBlock = pindexLast.getHeader();		
 

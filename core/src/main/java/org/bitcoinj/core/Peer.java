@@ -427,6 +427,8 @@ public class Peer extends PeerSocketHandler {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if(m instanceof DarkSendQueue) {
             //do nothing
+        } else if (m instanceof DarkSendElectionEntryMessage) {
+            //do nothing yet
         } else if(m instanceof MasternodeBroadcast) {
             if(!context.isLiteMode())
                 context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);

@@ -24,7 +24,7 @@ public class CoinDefinition {
     // To decrease granularity of timestamp
     // Supposed to be 2^n-1
     public static final int stakeTimestampMask = 15; // kernel.h
-    public static final long futureDrift = 15; // TODO
+    public static final long futureDrift = 120; // TODO
     public static final long minerMiliSleep = 500; // TODO
     //common to all coins
     public static final int bulgarianConst = 128;
@@ -73,26 +73,28 @@ public class CoinDefinition {
 
     public static final int targetTimespan = (int)(2 * 60);  //main.cpp#L988 nTargetTimespan = 2 * 60; // per difficulty cycle, on average.
     public static final int targetSpacing = 1 * 60;     //main.cpp#L43 nTargetSpacing = 1 * 60;
-    public static final int targetSpacing2 = 1 * 60;
+    public static final int targetSpacing2 = 1 * 60;    // ^ main.h#L97~
     public static final int interval = targetTimespan / targetSpacing;
 
     //main.cpp#L48 nCoinbaseMaturity = 500
     public static int spendableCoinbaseDepth = 30; //main.h: static const int COINBASE_MATURITY
-    public static final long maxCoins = 55000000;                 //main.h:  MAX_MONEY
-    public static final int maxBlockSize = 8000000;
+    public static final long maxCoins = 20000000;                 //main.h:  MAX_MONEY
+    public static final int maxBlockSize = 8000000;          // main.h MAX_BLOCK_SIZE
 
     public static final long minTxFee = Coin.valueOf(1000).longValue();
 //    public static final long DUST_LIMIT = Coin.valueOf(1000).longValue(); //main.h CTransaction::GetMinFee
-    public static final long INSTANTX_FEE = Coin.valueOf(1000000).longValue();
+    public static final long INSTANTX_FEE = Coin.valueOf(10000).longValue();
     //
     // Ion
     //
 
     public static final int protocolVersion = 60027;
     public static final int minProtocolVersion = 60016;
-    public static final long blockVersion = 1;
-    public static final int protocolV1RetargetingFixed = 38423; // TODO
-    public static final long txTimeProtocolV3 = 1444028400; // TODO
+    public static final long blockVersion = 7;
+    public static final int protocolV1RetargetingFixed = 0; // main.h
+    public static final long txTimeProtocolV3 = 1446249600; // main.h
+
+    public static final String localNode = "10.0.2.2";
 
 //    public static final boolean supportsBloomFiltering = true; //Requires protocolVersion 70000 in the client
 
@@ -104,7 +106,6 @@ public class CoinDefinition {
 //    public static final long oldPacketMagic = 0xfbc0b6db;      //0xfb, 0xc0, 0xb6, 0xdb
 //    public static final long PacketMagic = 0xbff41ab6;
 
-    public static BigInteger maxTarget;
 
     public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
 
@@ -112,8 +113,13 @@ public class CoinDefinition {
     public static int subsidyDecreaseBlockCount = 525600;  // TODO   //main.cpp GetBlockValue(height, fee)
 
     public static BigInteger proofOfWorkLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
+    public static BigInteger testnetProofOfWorkLimit = Utils.decodeCompactBits(0x1f00ffffL);
+
+    public static BigInteger proofOfStakeLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
+    public static BigInteger testnetProofOfStakeLimit = Utils.decodeCompactBits(0x1e0fffffL);
 
 
+    public static BigInteger maxTarget  = Utils.decodeCompactBits(0x1f00ffffL); // POW limit
 
     /** The string returned by getId() for the main, production network where people trade things. */
     public static final String ID_MAINNET = "com.ionomy.production";
@@ -144,6 +150,7 @@ public class CoinDefinition {
     public static final int p2shHeader = 88;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
     static public String genesisHash = "000001a7bb3214e3e1d2e4c256082b817a3c5dff5def37456ae16d7edaa508be"; //main.cpp: hashGenesisBlock
     static public String genesisMerkleRoot = "a1de9df44936bd1dd483e217fa17ec1881d2caf741ca67a33f6cd6850183078c"; // ? or is this block 1 TODO
+    // TODO Testnet ^^
 //    static public int genesisBlockValue = 10900000;                                                              //main.cpp: LoadBlockIndex
     //taken from the raw data of the block explorer
 //    static public String genesisTxInBytes = "04ffff001d01044c5957697265642030392f4a616e2f3230313420546865204772616e64204578706572696d656e7420476f6573204c6976653a204f76657273746f636b2e636f6d204973204e6f7720416363657074696e6720426974636f696e73";   //"limecoin se convertira en una de las monedas mas segura del mercado, checa nuestros avances"
@@ -153,6 +160,7 @@ public class CoinDefinition {
     static public String[] dnsSeeds = new String[] {
             "dnsseed.ionomy.com",
             "45.32.211.127",
+            "main.seed.ionomy.nl"
     };
 
 
@@ -164,12 +172,18 @@ public class CoinDefinition {
     public static final boolean supportsTestNet = true;
     public static final int testnetAddressHeader = 127;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS_TEST
     public static final int testnetp2shHeader = 196;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS_TEST
-    public static final long testnetPacketMagic = 0x5ff21530;      //
-    public static final String testnetGenesisHash = "0000070638e1fb122fb31b4753a5311f3c8784604d9f6ce42e8fec96d94173b4";
+    public static final long testnetPacketMagic = 0x5ff21530;      //0x5ff21530
+//    public static final String testnetGenesisHash = "0000070638e1fb122fb31b4753a5311f3c8784604d9f6ce42e8fec96d94173b4";
+    public static final String testnetGenesisHash = "0000070638e1fb122fb31b4753a5311f3c8784604d9f6ce42e8fec96d94173b4"; // scrypt
     static public long testnetGenesisBlockDifficultyTarget = (0x1f00ffffL);         //main.cpp: LoadBlockIndex
     static public long testnetGenesisBlockTime = 1458750507L;                       //main.cpp: LoadBlockIndex
     static public long testnetGenesisBlockNonce = (72686);                        //main.cpp: LoadBlockIndex
+    static public final String testnetGenesisMerkleroot = "a1de9df44936bd1dd483e217fa17ec1881d2caf741ca67a33f6cd6850183078c";                        //main.cpp: LoadBlockIndex
+    //public static BigInteger testnetProofOfWorkLimit = Utils.decodeCompactBits(0x1f00ffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
+
+
     static public String[] testnetDnsSeeds = new String[] {
+        "test.seed.ionomy.nl",
     };
 
 

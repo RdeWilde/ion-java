@@ -18,6 +18,8 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.store.BlockStore;
+import org.bitcoinj.store.BlockStoreException;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -122,5 +124,12 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     @Override
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_MAINNET;
+    }
+
+
+    @Override
+    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
+                                           final BlockStore blockStore) throws VerificationException, BlockStoreException {
+        // TODO FIXME verifyDifficulty(getNextTargetRequired(storedPrev, blockStore, nextBlock.isStake()), nextBlock);
     }
 }
