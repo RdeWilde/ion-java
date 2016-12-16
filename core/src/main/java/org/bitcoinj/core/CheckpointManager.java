@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2013 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +28,9 @@ import com.google.common.io.BaseEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.*;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,48 +79,39 @@ public class CheckpointManager {
     protected final TreeMap<Long, StoredBlock> checkpoints = new TreeMap<Long, StoredBlock>();
 
     protected final NetworkParameters params;
-    private Sha256Hash theLast;
+    protected final Sha256Hash dataHash;
 
     public static final BaseEncoding BASE64 = BaseEncoding.base64().omitPadding();
 
-    public CheckpointManager(FullPrunedBlockStore store, NetworkParameters params, InputStream inputStreamBlck, InputStream inputStreamTx) throws IOException {
-        checkNotNull(store);
-        this.params = checkNotNull(params);
-        checkNotNull(inputStreamBlck);
-        checkNotNull(inputStreamTx);
-        initTxHases(store, inputStreamTx);
-        initBlockHash(store, inputStreamBlck);
-        
+    /** Loads the default checkpoints bundled with bitcoinj */
+    public CheckpointManager(Context context) throws IOException {
+        this(context.getParams(), null);
     }
 
-	private void initTxHases(FullPrunedBlockStore store, InputStream inputStreamTx) throws IOException {
-		inputStreamTx = new BufferedInputStream(inputStreamTx);
-		inputStreamTx.mark(1);
-        int first = inputStreamTx.read();
-        inputStreamTx.reset();
+    /** Loads the checkpoints from the given stream */
+    public CheckpointManager(NetworkParameters params, @Nullable InputStream inputStream) throws IOException {
+        this.params = checkNotNull(params);
+        if (inputStream == null)
+            inputStream = openStream(params);
+        checkNotNull(inputStream);
+        inputStream = new BufferedInputStream(inputStream);
+        inputStream.mark(1);
+        int first = inputStream.read();
+        inputStream.reset();
         if (first == BINARY_MAGIC.charAt(0))
-            readBinaryTx(store, inputStreamTx);
+            dataHash = readBinary(inputStream);
         else if (first == TEXTUAL_MAGIC.charAt(0))
-        	readTextualTx(store, inputStreamTx);
+            dataHash = readTextual(inputStream);
         else
             throw new IOException("Unsupported format.");
-		
-	}
+    }
 
-	private void initBlockHash(FullPrunedBlockStore store, InputStream inputStreamBlck) throws IOException {
-		inputStreamBlck = new BufferedInputStream(inputStreamBlck);
-        inputStreamBlck.mark(1);
-        int first = inputStreamBlck.read();
-        inputStreamBlck.reset();
-        if (first == BINARY_MAGIC.charAt(0))
-            readBinary(store, inputStreamBlck);
-        else if (first == TEXTUAL_MAGIC.charAt(0))
-            readTextual(store, inputStreamBlck);
-        else
-            throw new IOException("Unsupported format.");
-	}
+    /** Returns a checkpoints stream pointing to inside the bitcoinj JAR */
+    public static InputStream openStream(NetworkParameters params) {
+        return CheckpointManager.class.getResourceAsStream("/" + params.getId() + ".checkpoints.txt");
+    }
 
-	private Sha256Hash readBinary(FullPrunedBlockStore store, InputStream inputStream) throws IOException {
+    private Sha256Hash readBinary(InputStream inputStream) throws IOException {
         DataInputStream dis = null;
         try {
             MessageDigest digest = Sha256Hash.newDigest();
@@ -147,17 +138,7 @@ public class CheckpointManager {
                     throw new IOException("Incomplete read whilst loading checkpoints.");
                 StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
                 buffer.position(0);
-                try {
-					store.putCheckPointed(block);
-					store.setChainHead(block);
-					store.setVerifiedChainHead(block);
-					if(this.theLast==null){
-						this.theLast = block.getHeader().getHash();
-						log.info("Seting lst " + block.getHeader().getHashAsString());
-					}
-				} catch (BlockStoreException e) {
-					throw new IOException(e);
-				}
+                checkpoints.put(block.getHeader().getTimeSeconds(), block);
             }
             Sha256Hash dataHash = Sha256Hash.wrap(digest.digest());
             log.info("Read {} checkpoints, hash is {}", checkpoints.size(), dataHash);
@@ -170,7 +151,7 @@ public class CheckpointManager {
         }
     }
 
-	private Sha256Hash readTextual(FullPrunedBlockStore store, InputStream inputStream) throws IOException {
+    private Sha256Hash readTextual(InputStream inputStream) throws IOException {
         Hasher hasher = Hashing.sha256().newHasher();
         BufferedReader reader = null;
         try {
@@ -187,119 +168,14 @@ public class CheckpointManager {
             hasher.putBytes(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(numCheckpoints).array());
             final int size = StoredBlock.COMPACT_SERIALIZED_SIZE;
             ByteBuffer buffer = ByteBuffer.allocate(size);
-            StoredBlock lastThird = null;
             for (int i = 0; i < numCheckpoints; i++) {
                 byte[] bytes = BASE64.decode(reader.readLine());
                 hasher.putBytes(bytes);
                 buffer.position(0);
                 buffer.put(bytes);
                 buffer.position(0);
-                StoredBlock block = StoredBlock.deserializeBlkCompact(params, buffer);
-                try {
-                	log.info(String.valueOf(block.getHeight()));
-					log.info(String.valueOf(block.getHeader().getHash()));
-					store.putCheckPointed(block);
-					store.setChainHead(block);
-					store.setVerifiedChainHead(block);
-					if(lastThird==null){
-						this.theLast = block.getHeader().getHash();
-						log.info("Seting lst thrd " + block.getHeader().getHashAsString());
-					}
-					
-				} catch (BlockStoreException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-            }
-            HashCode hash = hasher.hash();
-            log.info("Read {} checkpoints, hash is {}", checkpoints.size(), hash);
-            return Sha256Hash.wrap(hash.asBytes());
-        } finally {
-            if (reader != null) reader.close();
-        }
-    }
-
-	private Sha256Hash readBinaryTx(FullPrunedBlockStore store, InputStream inputStream) throws IOException {
-        DataInputStream dis = null;
-        try {
-            MessageDigest digest = Sha256Hash.newDigest();
-            DigestInputStream digestInputStream = new DigestInputStream(inputStream, digest);
-            dis = new DataInputStream(digestInputStream);
-            digestInputStream.on(false);
-            byte[] header = new byte[BINARY_MAGIC.length()];
-            dis.readFully(header);
-            if (!Arrays.equals(header, BINARY_MAGIC.getBytes("US-ASCII")))
-                throw new IOException("Header bytes did not match expected version");
-            int numSignatures = dis.readInt();
-            for (int i = 0; i < numSignatures; i++) {
-                byte[] sig = new byte[65];
-                dis.readFully(sig);
-                // TODO: Do something with the signature here.
-            }
-            digestInputStream.on(true);
-            int numCheckpoints = dis.readInt();
-            checkState(numCheckpoints > 0);
-            log.info("txs " + numCheckpoints);
-            int fiftyPercent = (int) Math.ceil(numCheckpoints/2);
-            for (int i = 0; i < numCheckpoints; i++) {
-            	int size = dis.readInt();
-            	ByteBuffer buffer = ByteBuffer.allocate(size);
-                if (dis.read(buffer.array(), 0, size) < size)
-                    throw new IOException("Incomplete read whilst loading checkpoints.");
-                ByteArrayInputStream inStream = null;             
-                try {
-                	inStream = new ByteArrayInputStream (buffer.array());
-    				UTXO utxo = new UTXO(inStream);
-                    buffer.position(0);
-					store.addUnspentTransactionOutput(utxo);
-				} catch (BlockStoreException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}finally {
-					if(inputStream!=null)
-						inStream.close();
-				}
-                if(i==fiftyPercent){
-                	log.info("50%");
-                }
-            }
-            Sha256Hash dataHash = Sha256Hash.wrap(digest.digest());
-            log.info("Read {} checkpoints, hash is {}", checkpoints.size(), dataHash);
-            return dataHash;
-        } catch (ProtocolException e) {
-            throw new IOException(e);
-        } finally {
-            if (dis != null) dis.close();
-            if (inputStream != null) inputStream.close();
-        }
-    }
-    
-
-    private Sha256Hash readTextualTx(FullPrunedBlockStore store, InputStream inputStream) throws IOException {
-        Hasher hasher = Hashing.sha256().newHasher();
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(inputStream, Charsets.US_ASCII));
-            String magic = reader.readLine();
-            if (!TEXTUAL_MAGIC.equals(magic))
-                throw new IOException("unexpected magic: " + magic);
-            int numSigs = Integer.parseInt(reader.readLine());
-            for (int i = 0; i < numSigs; i++)
-                reader.readLine(); // Skip sigs for now.
-            int numCheckpoints = Integer.parseInt(reader.readLine());
-            checkState(numCheckpoints > 0);
-            // Hash numCheckpoints in a way compatible to the binary format.
-            hasher.putBytes(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(numCheckpoints).array());
-            for (int i = 0; i < numCheckpoints; i++) {
-                byte[] bytes = BASE64.decode(reader.readLine());
-                ByteArrayInputStream inStream;
-                try {
-                	inStream = new ByteArrayInputStream (bytes);
-                    UTXO utxo = new UTXO(inStream);
-					store.addUnspentTransactionOutput(utxo);
-				} catch (BlockStoreException e) {
-					throw new IOException(e);
-				}
+                StoredBlock block = StoredBlock.deserializeCompact(params, buffer);
+                checkpoints.put(block.getHeader().getTimeSeconds(), block);
             }
             HashCode hash = hasher.hash();
             log.info("Read {} checkpoints, hash is {}", checkpoints.size(), hash);
@@ -331,6 +207,11 @@ public class CheckpointManager {
         return checkpoints.size();
     }
 
+    /** Returns a hash of the concatenated checkpoint data. */
+    public Sha256Hash getDataHash() {
+        return dataHash;
+    }
+
     /**
      * <p>Convenience method that creates a CheckpointManager, loads the given data, gets the checkpoint for the given
      * time, then inserts it into the store and sets that to be the chain head. Useful when you have just created
@@ -338,19 +219,21 @@ public class CheckpointManager {
      *
      * <p>Note that time is adjusted backwards by a week to account for possible clock drift in the block headers.</p>
      */
-    public static void checkpoint(NetworkParameters params, InputStream checkpoints, InputStream checkpointsTx, FullPrunedBlockStore store, long time)
+    public static void checkpoint(NetworkParameters params, InputStream checkpoints, BlockStore store, long time)
             throws IOException, BlockStoreException {
         checkNotNull(params);
         checkNotNull(store);
-       
+        checkArgument(!(store instanceof FullPrunedBlockStore), "You cannot use checkpointing with a full store.");
+
+        time -= 86400 * 7;
+
+        checkArgument(time > 0);
+        log.info("Attempting to initialize a new block store with a checkpoint for time {} ({})", time, Utils.dateTimeFormat(time * 1000));
 
         BufferedInputStream stream = new BufferedInputStream(checkpoints);
-        BufferedInputStream streamtx = new BufferedInputStream(checkpointsTx);
-        CheckpointManager checkpointManager = new CheckpointManager(store, params, stream, streamtx);
-        store.setTheLast(checkpointManager.getLast());
+        CheckpointManager manager = new CheckpointManager(params, stream);
+        StoredBlock checkpoint = manager.getCheckpointBefore(time);
+        store.put(checkpoint);
+        store.setChainHead(checkpoint);
     }
-
-	public Sha256Hash getLast() {
-		return theLast;
-	}
 }
