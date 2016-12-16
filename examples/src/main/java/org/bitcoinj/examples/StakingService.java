@@ -43,7 +43,7 @@ public class StakingService {
         BriefLogFormatter.init();
 
         // Figure out which network we should connect to. Each one gets its own set of files.
-        NetworkParameters params;
+        final NetworkParameters params;
         String filePrefix;
             params = MainNetParams.get();
             filePrefix = "forwarding-service";
