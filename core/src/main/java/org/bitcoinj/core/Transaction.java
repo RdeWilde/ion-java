@@ -61,11 +61,11 @@ public class Transaction extends ChildMessage implements Serializable {
     public static final Comparator<Transaction> SORT_TX_BY_UPDATE_TIME = new Comparator<Transaction>() {
         @Override
         public int compare(final Transaction tx1, final Transaction tx2) {
-            final long time1 = tx1.getUpdateTime().getTime();
-            final long time2 = tx2.getUpdateTime().getTime();
-            final int updateTimeComparison = -(Longs.compare(time1, time2));
-            //If time1==time2, compare by tx hash to make comparator consistent with equals
-            return updateTimeComparison != 0 ? updateTimeComparison : tx1.getHash().compareTo(tx2.getHash());
+        final long time1 = tx1.getUpdateTime().getTime();
+        final long time2 = tx2.getUpdateTime().getTime();
+        final int updateTimeComparison = -(Longs.compare(time1, time2));
+        //If time1==time2, compare by tx hash to make comparator consistent with equals
+        return updateTimeComparison != 0 ? updateTimeComparison : tx1.getHash().compareTo(tx2.getHash());
         }
     };
     /** A comparator that can be used to sort transactions by their chain height. */

@@ -1,6 +1,8 @@
 package org.bitcoinj.core;
 
 import java.math.BigInteger;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.Map;
 
 /**
@@ -94,7 +96,7 @@ public class CoinDefinition {
     public static final int protocolV1RetargetingFixed = 0; // main.h
     public static final long txTimeProtocolV3 = 1446249600; // main.h
 
-    public static final String localNode = "10.0.2.2";
+    public static final String localNode = Utils.isAndroidRuntime() ? "10.0.2.2" : "127.0.0.1";
 
 //    public static final boolean supportsBloomFiltering = true; //Requires protocolVersion 70000 in the client
 

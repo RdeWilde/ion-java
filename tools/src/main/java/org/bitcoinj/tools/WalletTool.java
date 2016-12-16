@@ -832,6 +832,8 @@ public class WalletTool {
             }
         }
         if (peers == null) {
+            Context context = new Context(params);
+            context.initDash(mode == ValidationMode.SPV, true);
             peers = new PeerGroup(params, chain);
         }
         peers.setUserAgent("WalletTool", "1.0");

@@ -44,9 +44,9 @@ public class DeterministicKey extends ECKey {
     public static final Comparator<ECKey> CHILDNUM_ORDER = new Comparator<ECKey>() {
         @Override
         public int compare(ECKey k1, ECKey k2) {
-            ChildNumber cn1 = ((DeterministicKey) k1).getChildNumber();
-            ChildNumber cn2 = ((DeterministicKey) k2).getChildNumber();
-            return cn1.compareTo(cn2);
+        ChildNumber cn1 = ((DeterministicKey) k1).getChildNumber();
+        ChildNumber cn2 = ((DeterministicKey) k2).getChildNumber();
+        return cn1.compareTo(cn2);
         }
     };
 

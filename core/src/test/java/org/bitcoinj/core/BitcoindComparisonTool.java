@@ -209,8 +209,8 @@ public class BitcoindComparisonTool {
         bitcoindChainHead = params.getGenesisBlock().getHash();
         
         // bitcoind MUST be on localhost or we will get banned as a DoSer
-        new NioClient(new InetSocketAddress(InetAddress.getByName("10.0.2.2"), args.length > 2 ? Integer.parseInt(args[2]) : params.getPort()), bitcoind, 1000);
-// FIXME CoinDefinition.localNode
+        new NioClient(new InetSocketAddress(InetAddress.getByName(CoinDefinition.localNode), args.length > 2 ? Integer.parseInt(args[2]) : params.getPort()), bitcoind, 1000);
+
         connectedFuture.get();
 
         ArrayList<Sha256Hash> locator = new ArrayList<Sha256Hash>(1);

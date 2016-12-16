@@ -90,8 +90,7 @@ public class HSDirectories {
 			}
 		}
 		
-		Collections.sort(hsDirectories, new Comparator<Router>() {
-			public int compare(Router r1, Router r2) {
+		Collections.sort(hsDirectories, (Router r1, Router r2) {
 				final String s1 = r1.getIdentityHash().toString();
 				final String s2 = r2.getIdentityHash().toString();
 				return s1.compareTo(s2);

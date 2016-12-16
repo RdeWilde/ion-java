@@ -348,10 +348,10 @@ public class Staker extends AbstractExecutionThreadService {
 	private static class TransactionPriorityComparator implements Comparator<Transaction> {
 		@Override
 		public int compare(Transaction tx1, Transaction tx2) {
-			int updateTimeComparison = tx1.getUpdateTime().compareTo(tx2.getUpdateTime());
-			// If time1==time2, compare by tx hash to make comparator consistent
-			// with equals
-			return updateTimeComparison != 0 ? updateTimeComparison : tx1.getHash().compareTo(tx2.getHash());
+		int updateTimeComparison = tx1.getUpdateTime().compareTo(tx2.getUpdateTime());
+		// If time1==time2, compare by tx hash to make comparator consistent
+		// with equals
+		return updateTimeComparison != 0 ? updateTimeComparison : tx1.getHash().compareTo(tx2.getHash());
 		}
 	}
 
