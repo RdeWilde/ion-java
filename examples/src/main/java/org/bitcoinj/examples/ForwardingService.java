@@ -81,7 +81,7 @@ public class ForwardingService {
         // We want to know when we receive money.
         kit.wallet().addEventListener(new AbstractWalletEventListener() {
             @Override
-            public void onCoinsReceived(Wallet w, Transaction tx, Coin prevBalance, Coin newBalance) {
+            public void onCoinsReceived(Wallet w, final Transaction tx, Coin prevBalance, Coin newBalance) {
                 // Runs in the dedicated "user thread" (see bitcoinj docs for more info on this).
                 //
                 // The transaction "tx" can either be pending, or included into a block (we didn't see the broadcast).
