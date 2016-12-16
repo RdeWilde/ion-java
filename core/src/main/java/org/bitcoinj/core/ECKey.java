@@ -94,13 +94,12 @@ public class ECKey implements EncryptableItem {
 
     /** Sorts oldest keys first, newest last. */
     public static final Comparator<ECKey> AGE_COMPARATOR = new Comparator<ECKey>() {
-
         @Override
         public int compare(ECKey k1, ECKey k2) {
-            if (k1.creationTimeSeconds == k2.creationTimeSeconds)
-                return 0;
-            else
-                return k1.creationTimeSeconds > k2.creationTimeSeconds ? 1 : -1;
+        if (k1.creationTimeSeconds == k2.creationTimeSeconds)
+            return 0;
+        else
+            return k1.creationTimeSeconds > k2.creationTimeSeconds ? 1 : -1;
         }
     };
 

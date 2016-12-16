@@ -18,6 +18,7 @@
 package org.bitcoinj.tools;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -59,12 +60,18 @@ public class BuildCheckpoints {
 
         // Configure bitcoinj to fetch only headers, not save them to disk, connect to a local fully synced/validated
         // node and to save block headers that are on interval boundaries, as long as they are <1 month old.
+        Context context = new Context(PARAMS);
+        context.initDash(true, true);
+
         final BlockStore store = new MemoryBlockStore(PARAMS);
         final BlockChain chain = new BlockChain(PARAMS, store);
         final PeerGroup peerGroup = new PeerGroup(PARAMS, chain);
-        final InetAddress peerAddress = InetAddress.getLocalHost();
-        System.out.println("Connecting to " + peerAddress + "...");
+        final InetAddress peerAddress = InetAddress.getLoopbackAddress();
+//        System.out.println("Connecting to " + peerAddress + "...");
         peerGroup.addAddress(peerAddress);
+        peerGroup.setUseLocalhostPeerWhenPossible(true);
+        peerGroup.addPeerDiscovery(new DnsDiscovery(PARAMS));
+
         long now = new Date().getTime() / 1000;
         peerGroup.setFastCatchupTimeSecs(now);
 

@@ -1,7 +1,5 @@
 package org.bitcoinj.utils;
 
-import java.util.Comparator;
-
 /**
  * Created by Eric on 2/24/2016.
  */

@@ -410,6 +410,11 @@ public class PeerGroup implements TransactionBroadcaster {
         runningBroadcasts2 = Collections.synchronizedSet(new HashSet<BlockBroadcast>());
 //        bloomFilterMerger = new FilterMerger(DEFAULT_BLOOM_FILTER_FP_RATE);
         context.setPeerGroupAndBlockChain(this, chain);
+
+        if (CoinDefinition.dnsSeeds.length > 0) {
+            // TODO FIXME testnet?S
+            DnsDiscovery dns = new DnsDiscovery(CoinDefinition.dnsSeeds, params);
+        }
     }
 
     private CountDownLatch executorStartupLatch = new CountDownLatch(1);
@@ -494,13 +499,13 @@ public class PeerGroup implements TransactionBroadcaster {
                 // First run: try and use a local node if there is one, for the additional security it can provide.
                 // But, not on Android as there are none for this platform: it could only be a malicious app trying
                 // to hijack our traffic.
-                if (useLocalhostPeerWhenPossible && maybeCheckForLocalhostPeer() && firstRun) { // (!Utils.isAndroidRuntime() || log.isDebugEnabled()) &&
+                if (useLocalhostPeerWhenPossible && maybeCheckForLocalhostPeer() && firstRun) {
                     log.info("Localhost peer detected, trying to use it instead of P2P discovery");
                     maxConnections = 0;
                     connectToLocalHost();
                     return;
                 }
-
+// Indien geen peers maar wel een backoffMap met peers voor later, gaat dit als een malle lussen. TODO FIXME
                 boolean havePeerWeCanTry = !inactives.isEmpty() && backoffMap.get(inactives.peek()).getRetryTime() <= now;
                 doDiscovery = !havePeerWeCanTry;
             } finally {

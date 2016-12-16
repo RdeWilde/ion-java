@@ -411,6 +411,14 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -514,6 +522,16 @@
             <artifactId>okhttp</artifactId>
             <version>2.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>net.sf.jopt-simple</groupId>
+            <artifactId>jopt-simple</artifactId>
+            <version>4.3</version>
+        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.bitcoinj</groupId>-->
+            <!--<artifactId>ionj-tools</artifactId>-->
+            <!--<version>0.13.5</version>-->
+        <!--</dependency>-->
     </dependencies>
 
 </project>

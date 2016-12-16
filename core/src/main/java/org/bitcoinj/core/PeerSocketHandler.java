@@ -176,6 +176,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
                         // seeking past part of the magic bytes before all of them are in the buffer
                         buff.position(preSerializePosition);
                     }
+
                     return buff.position();
                 }
                 // Process our freshly deserialized message
