@@ -788,7 +788,7 @@ public class Transaction extends ChildMessage implements Serializable {
      * to understand the values of sigHash and anyoneCanPay: otherwise you can use the other form of this method
      * that sets them to typical defaults.
      *
-     * @throws ScriptException if the scriptPubKey is not a pay to address or pay to pubkey script.
+     * @throws ScriptException if the scriptPubKey is not a pay to address or pay to pubKeyCollateralAddress script.
      */
     public TransactionInput addSignedInput(TransactionOutPoint prevOut, Script scriptPubKey, ECKey sigKey,
                                            SigHash sigHash, boolean anyoneCanPay) throws ScriptException {
@@ -865,7 +865,7 @@ public class Transaction extends ChildMessage implements Serializable {
     }
 
     /**
-     * Creates an output that pays to the given pubkey directly (no address) with the given value, adds it to this
+     * Creates an output that pays to the given pubKeyCollateralAddress directly (no address) with the given value, adds it to this
      * transaction, and returns the new output.
      */
     public TransactionOutput addOutput(Coin value, ECKey pubkey) {

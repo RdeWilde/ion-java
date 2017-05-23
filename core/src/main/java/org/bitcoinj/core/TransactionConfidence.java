@@ -17,17 +17,21 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.collect.*;
-import com.google.common.util.concurrent.*;
-import org.bitcoinj.utils.*;
-import org.darkcoinj.InstantXSystem;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 
-import javax.annotation.*;
-import java.io.*;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 // TODO: Modify the getDepthInBlocks method to require the chain height to be specified, in preparation for ceasing to touch every tx on every block.
 
@@ -98,6 +102,8 @@ public class TransactionConfidence implements Serializable {
          * It can also mean that a coinbase transaction has been made dead from it being moved onto a side chain.
          */
         DEAD(4),
+
+        IN_CONFLICT(5),
 
         /**
          * If a transaction hasn't been broadcast yet, or there's no record of it, its confidence is UNKNOWN.

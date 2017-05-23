@@ -375,7 +375,7 @@ public class ECKey implements EncryptableItem, Serializable {
             point = getPointWithCompression(point, compressed);
             this.pub = new LazyECPoint(point);
         } else {
-            // We expect the pubkey to be in regular encoded form, just as a BigInteger. Therefore the first byte is
+            // We expect the pubKeyCollateralAddress to be in regular encoded form, just as a BigInteger. Therefore the first byte is
             // a special marker byte.
             // TODO: This is probably not a useful API and may be confusing.
             this.pub = new LazyECPoint(CURVE.getCurve(), pubKey);
@@ -651,7 +651,7 @@ public class ECKey implements EncryptableItem, Serializable {
      *
      * @param aesKey The AES key to use for decryption of the private key. If null then no decryption is required.
      * @throws KeyCrypterException if there's something wrong with aesKey.
-     * @throws ECKey.MissingPrivateKeyException if this key cannot sign because it's pubkey only.
+     * @throws ECKey.MissingPrivateKeyException if this key cannot sign because it's pubKeyCollateralAddress only.
      */
     public ECDSASignature sign(Sha256Hash input, @Nullable KeyParameter aesKey) throws KeyCrypterException {
         KeyCrypter crypter = getKeyCrypter();
@@ -775,17 +775,17 @@ public class ECKey implements EncryptableItem, Serializable {
     }
 
     /**
-     * Returns true if the given pubkey is canonical, i.e. the correct length taking into account compression.
+     * Returns true if the given pubKeyCollateralAddress is canonical, i.e. the correct length taking into account compression.
      */
     public static boolean isPubKeyCanonical(byte[] pubkey) {
         if (pubkey.length < 33)
             return false;
         if (pubkey[0] == 0x04) {
-            // Uncompressed pubkey
+            // Uncompressed pubKeyCollateralAddress
             if (pubkey.length != 65)
                 return false;
         } else if (pubkey[0] == 0x02 || pubkey[0] == 0x03) {
-            // Compressed pubkey
+            // Compressed pubKeyCollateralAddress
             if (pubkey.length != 33)
                 return false;
         } else
@@ -826,7 +826,7 @@ public class ECKey implements EncryptableItem, Serializable {
             // Only allow compressed(2,3) and uncompressed(4), not infinity(0) or hybrid(6,7)
             checkArgument(encoding >= 2 && encoding <= 4, "Input has 'publicKey' with invalid encoding");
 
-            // Now sanity check to ensure the pubkey bytes match the privkey.
+            // Now sanity check to ensure the pubKeyCollateralAddress bytes match the privkey.
             boolean compressed = (pubbits.length == 33);
             ECKey key = new ECKey(privkey, null, compressed);
             if (!Arrays.equals(key.getPubKey(), pubbits))
@@ -983,7 +983,7 @@ public class ECKey implements EncryptableItem, Serializable {
      * @param recId Which possible key to recover.
      * @param sig the R and S components of the signature, wrapped.
      * @param message Hash of the data that was signed.
-     * @param compressed Whether or not the original pubkey was compressed.
+     * @param compressed Whether or not the original pubKeyCollateralAddress was compressed.
      * @return An ECKey containing only the public part, or null if recovery wasn't possible.
      */
     @Nullable

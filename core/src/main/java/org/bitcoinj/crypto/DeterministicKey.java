@@ -255,7 +255,7 @@ public class DeterministicKey extends ECKey {
      * Returns the same key with the private bytes removed. May return the same instance. The purpose of this is to save
      * memory: the private key can always be very efficiently rederived from a parent that a private key, so storing
      * all the private keys in RAM is a poor tradeoff especially on constrained devices. This means that the returned
-     * key may still be usable for signing and so on, so don't expect it to be a true pubkey-only object! If you want
+     * key may still be usable for signing and so on, so don't expect it to be a true pubKeyCollateralAddress-only object! If you want
      * that then you should follow this call with a call to {@link #dropParent()}.
      */
     public DeterministicKey dropPrivateBytes() {

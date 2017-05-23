@@ -55,7 +55,7 @@ public class KeyTimeCoinSelector implements CoinSelector {
             for (TransactionOutput output : candidates) {
                 if (ignorePending && !isConfirmed(output))
                     continue;
-                // Find the key that controls output, assuming it's a regular pay-to-pubkey or pay-to-address output.
+                // Find the key that controls output, assuming it's a regular pay-to-pubKeyCollateralAddress or pay-to-address output.
                 // We ignore any other kind of exotic output on the assumption we can't spend it ourselves.
                 final Script scriptPubKey = output.getScriptPubKey();
                 ECKey controllingKey;

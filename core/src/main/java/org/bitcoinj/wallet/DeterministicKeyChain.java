@@ -420,7 +420,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         externalKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), EXTERNAL_SUBPATH));
         internalKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), INTERNAL_SUBPATH));
 
-        // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
+        // Now copy the (pubKeyCollateralAddress only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to encrypt.
         for (ECKey eckey : chain.basicKeyChain.getKeys()) {
             DeterministicKey key = (DeterministicKey) eckey;
@@ -591,7 +591,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     /**
-     * Mark the DeterministicKeys as used, if they match the pubkey
+     * Mark the DeterministicKeys as used, if they match the pubKeyCollateralAddress
      * See {@link DeterministicKeyChain#markKeyAsUsed(DeterministicKey)} for more info on this.
      */
     @Nullable
@@ -639,7 +639,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
      * The returned key can be serialized and then passed into {@link #watch(org.bitcoinj.crypto.DeterministicKey)}
      * on another system to watch the hierarchy.</p>
      *
-     * <p>Note that the returned key is not pubkey only unless this key chain already is: the returned key can still
+     * <p>Note that the returned key is not pubKeyCollateralAddress only unless this key chain already is: the returned key can still
      * be used for signing etc if the private key bytes are available.</p>
      */
     public DeterministicKey getWatchingKey() {
@@ -986,7 +986,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         if (!chain.getWatchingKey().getPubKeyPoint().equals(getWatchingKey().getPubKeyPoint()))
             throw new KeyCrypterException("Provided AES key is wrong");
         chain.lookaheadSize = lookaheadSize;
-        // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
+        // Now copy the (pubKeyCollateralAddress only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to decrypt.
         for (ECKey eckey : basicKeyChain.getKeys()) {
             DeterministicKey key = (DeterministicKey) eckey;

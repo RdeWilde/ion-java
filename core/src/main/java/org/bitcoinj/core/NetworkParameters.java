@@ -127,11 +127,13 @@ public abstract class NetworkParameters implements Serializable {
             // A script containing the difficulty bits and the following message:
             //
             //   "20 Feb 2014 Bitcoin ATMs come to USA"
-        	byte[] bytes = Utils.HEX.decode(CoinDefinition.testnetGenesisHash);
+        	byte[] bytes = "The Guardian: [2nd Feb 2017] Finsbury Park mosque wins apology and damages from Thomson Reuters".getBytes(); // Utils.HEX.decode(CoinDefinition.genesisHash); // TODO testnet
             t.addInput(new TransactionInput(n, t, bytes));
             ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
+            scriptPubKeyBytes.write("045622582bdfad9366cdff9652d35a562af17ea4e3462d32cd988b32919ba2ff4bc806485be5228185ad3f75445039b6e744819c4a63304277ca8d20c99a6acec8".getBytes());
             scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
-            t.addOutput(new TransactionOutput(n, t, ZERO, scriptPubKeyBytes.toByteArray()));
+            TransactionOutput output = new TransactionOutput(n, t, COIN, scriptPubKeyBytes.toByteArray());
+            t.addOutput(output);
         } catch (Exception e) {
             // Cannot happen.
             throw new RuntimeException(e);
@@ -153,7 +155,7 @@ public abstract class NetworkParameters implements Serializable {
         genesisBlock.setStakeModifier2(Sha256Hash.ZERO_HASH);
         genesisBlock.setEntropyBit(genesisBlock.getHash().toBigInteger().and(BigInteger.ONE).longValue());
         genesisBlock.setGeneratedStakeModifier(true);
-        genesisBlock.setStakeHashProof(genesisBlock.getHash());
+        genesisBlock.setStakeHashProof(Sha256Hash.wrap("0000004cf5ffbf2e31a9aa07c86298efb01a30b8911b80af7473d1114715084b")); // FIXME genesisBlock.getHash());
         return genesisBlock;
     }
 
@@ -448,4 +450,24 @@ public abstract class NetworkParameters implements Serializable {
     public abstract boolean hasMaxMoney();
     
     public abstract BigInteger getNextTargetRequired(StoredBlock pindexLast, BlockStore blockStore) throws BlockStoreException ;
+
+
+    public abstract int getProtocolVersionNum(final ProtocolVersion version);
+
+    public enum ProtocolVersion {
+        MINIMUM(CoinDefinition.minProtocolVersion),
+        PONG(60001),
+        BLOOM_FILTER(70000),
+        CURRENT(CoinDefinition.protocolVersion);
+
+        private final int bitcoinProtocol;
+
+        ProtocolVersion(final int bitcoinProtocol) {
+            this.bitcoinProtocol = bitcoinProtocol;
+        }
+
+        public int getBitcoinProtocolVersion() {
+            return bitcoinProtocol;
+        }
+    }
 }

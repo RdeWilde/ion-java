@@ -4018,7 +4018,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted. It is used only in the creation of the multisig contract, as outputs are
      * created entirely by the secondary
      * </pre>
@@ -4028,7 +4028,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted. It is used only in the creation of the multisig contract, as outputs are
      * created entirely by the secondary
      * </pre>
@@ -4236,7 +4236,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted. It is used only in the creation of the multisig contract, as outputs are
      * created entirely by the secondary
      * </pre>
@@ -4248,7 +4248,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted. It is used only in the creation of the multisig contract, as outputs are
      * created entirely by the secondary
      * </pre>
@@ -4675,7 +4675,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted. It is used only in the creation of the multisig contract, as outputs are
        * created entirely by the secondary
        * </pre>
@@ -4687,7 +4687,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted. It is used only in the creation of the multisig contract, as outputs are
        * created entirely by the secondary
        * </pre>
@@ -4699,7 +4699,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted. It is used only in the creation of the multisig contract, as outputs are
        * created entirely by the secondary
        * </pre>
@@ -4717,7 +4717,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted. It is used only in the creation of the multisig contract, as outputs are
        * created entirely by the secondary
        * </pre>
@@ -4948,7 +4948,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted.  It is only used in the creation of the multisig contract.
      * </pre>
      */
@@ -4957,7 +4957,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted.  It is only used in the creation of the multisig contract.
      * </pre>
      */
@@ -5106,7 +5106,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted.  It is only used in the creation of the multisig contract.
      * </pre>
      */
@@ -5117,7 +5117,7 @@ public final class Protos {
      * <code>required bytes multisig_key = 1;</code>
      *
      * <pre>
-     * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+     * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
      * are accepted.  It is only used in the creation of the multisig contract.
      * </pre>
      */
@@ -5433,7 +5433,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted.  It is only used in the creation of the multisig contract.
        * </pre>
        */
@@ -5444,7 +5444,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted.  It is only used in the creation of the multisig contract.
        * </pre>
        */
@@ -5455,7 +5455,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted.  It is only used in the creation of the multisig contract.
        * </pre>
        */
@@ -5472,7 +5472,7 @@ public final class Protos {
        * <code>required bytes multisig_key = 1;</code>
        *
        * <pre>
-       * This must be a raw pubkey in regular ECDSA form. Both compressed and non-compressed forms
+       * This must be a raw pubKeyCollateralAddress in regular ECDSA form. Both compressed and non-compressed forms
        * are accepted.  It is only used in the creation of the multisig contract.
        * </pre>
        */
@@ -6008,7 +6008,7 @@ public final class Protos {
      * The serialized bytes of the transaction in Satoshi format.
      * * It must be signed and completely valid and ready for broadcast (ie it includes the
      *   necessary fees) TODO: tell the client how much fee it needs
-     * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+     * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
      *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
      *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
      * </pre>
@@ -6021,7 +6021,7 @@ public final class Protos {
      * The serialized bytes of the transaction in Satoshi format.
      * * It must be signed and completely valid and ready for broadcast (ie it includes the
      *   necessary fees) TODO: tell the client how much fee it needs
-     * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+     * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
      *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
      *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
      * </pre>
@@ -6185,7 +6185,7 @@ public final class Protos {
      * The serialized bytes of the transaction in Satoshi format.
      * * It must be signed and completely valid and ready for broadcast (ie it includes the
      *   necessary fees) TODO: tell the client how much fee it needs
-     * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+     * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
      *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
      *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
      * </pre>
@@ -6200,7 +6200,7 @@ public final class Protos {
      * The serialized bytes of the transaction in Satoshi format.
      * * It must be signed and completely valid and ready for broadcast (ie it includes the
      *   necessary fees) TODO: tell the client how much fee it needs
-     * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+     * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
      *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
      *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
      * </pre>
@@ -6542,7 +6542,7 @@ public final class Protos {
        * The serialized bytes of the transaction in Satoshi format.
        * * It must be signed and completely valid and ready for broadcast (ie it includes the
        *   necessary fees) TODO: tell the client how much fee it needs
-       * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+       * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
        *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
        *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
        * </pre>
@@ -6557,7 +6557,7 @@ public final class Protos {
        * The serialized bytes of the transaction in Satoshi format.
        * * It must be signed and completely valid and ready for broadcast (ie it includes the
        *   necessary fees) TODO: tell the client how much fee it needs
-       * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+       * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
        *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
        *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
        * </pre>
@@ -6572,7 +6572,7 @@ public final class Protos {
        * The serialized bytes of the transaction in Satoshi format.
        * * It must be signed and completely valid and ready for broadcast (ie it includes the
        *   necessary fees) TODO: tell the client how much fee it needs
-       * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+       * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
        *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
        *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
        * </pre>
@@ -6593,7 +6593,7 @@ public final class Protos {
        * The serialized bytes of the transaction in Satoshi format.
        * * It must be signed and completely valid and ready for broadcast (ie it includes the
        *   necessary fees) TODO: tell the client how much fee it needs
-       * * Its first output must be a 2-of-2 multisig output with the first pubkey being the
+       * * Its first output must be a 2-of-2 multisig output with the first pubKeyCollateralAddress being the
        *   primary's and the second being the secondary's (ie the script must be exactly "OP_2
        *   ProvideRefund.multisig_key Initiate.multisig_key OP_2 OP_CHECKMULTISIG")
        * </pre>

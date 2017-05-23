@@ -1,9 +1,8 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.store.MasternodeDB;
-import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.darkcoinj.DarkSendPool;
-import org.darkcoinj.InstantXSystem;
+import org.darkcoinj.InstantSend;
 import org.slf4j.*;
 
 import static com.google.common.base.Preconditions.*;
@@ -45,7 +44,7 @@ public class Context {
     public MasternodeSync masternodeSync;
     public ActiveMasternode activeMasternode;
     public DarkSendPool darkSendPool;
-    public InstantXSystem instantx;
+    public InstantSend instantx;
     public MasternodeDB masternodeDB;
 
     /**
@@ -173,7 +172,7 @@ public class Context {
         masternodeSync = new MasternodeSync(this);
         activeMasternode = new ActiveMasternode(this);
         darkSendPool = new DarkSendPool(this);
-        instantx = new InstantXSystem(this);
+        instantx = new InstantSend(this);
         masternodeManager = new MasternodeManager(this);
     }
 

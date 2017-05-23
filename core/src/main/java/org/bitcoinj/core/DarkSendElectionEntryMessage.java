@@ -13,7 +13,7 @@ public class DarkSendElectionEntryMessage extends Message {
     private static final Logger log = LoggerFactory.getLogger(DarkSendElectionEntryMessage.class);
 
     TransactionInput vin;
-    PeerAddress addr;
+    MasternodeAddress addr;
     PublicKey pubkey;
     PublicKey pubkey2;
     byte [] vchSig;
@@ -35,8 +35,8 @@ public class DarkSendElectionEntryMessage extends Message {
     {
         super(params, payloadBytes, 0, false, false, payloadBytes.length);
     }
-
-    DarkSendElectionEntryMessage(NetworkParameters params, TransactionInput vin, PeerAddress addr, byte [] vchSig,  long sigTime, PublicKey pubkey, PublicKey pubkey2, int count, int current, long lastTimeSeen, int protocolVersion)
+// TODO rdw PeerAddress
+    DarkSendElectionEntryMessage(NetworkParameters params, TransactionInput vin, MasternodeAddress addr, byte [] vchSig,  long sigTime, PublicKey pubkey, PublicKey pubkey2, int count, int current, long lastTimeSeen, int protocolVersion)
     {
         super(params);
         this.vin = vin;
@@ -105,14 +105,23 @@ public class DarkSendElectionEntryMessage extends Message {
 
         optimalEncodingMessageSize = 0;
 
-        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor, this, parseLazy, parseRetain);
-        cursor += outpoint.getMessageSize();
-        int scriptLen = (int) readVarInt();
-        byte [] scriptBytes = readBytes(scriptLen);
-        long sequence = readUint32();
-        vin = new TransactionInput(params, null, scriptBytes, outpoint);
+//        TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor, this, parseLazy, parseRetain);
+//        cursor += outpoint.getMessageSize();
+//        int scriptLen = (int) readVarInt();
+//        byte [] scriptBytes = readBytes(scriptLen);
+////        long sequence = readUint32();
+//        vin = new TransactionInput(params, null, scriptBytes, outpoint);
+        vin = new TransactionInput(params, null, payload, cursor);
+        cursor += vin.getMessageSize();
 
-        optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
+        addr = new MasternodeAddress(params, payload, cursor, CoinDefinition.protocolVersion);
+        cursor += addr.getMessageSize();
+
+//        optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
+
+        vchSig = readByteArray();
+
+        sigTime = readInt64();
 
         pubkey = new PublicKey(params, payload, cursor, this, parseLazy, parseRetain);
         cursor += pubkey.getMessageSize();
@@ -120,17 +129,18 @@ public class DarkSendElectionEntryMessage extends Message {
         pubkey2 = new PublicKey(params, payload, cursor, this, parseLazy, parseRetain);
         cursor += pubkey.getMessageSize();
 
-        vchSig = readByteArray();
-
-        sigTime = readInt64();
-
         count = (int)readUint32();
-
         current = (int)readUint32();
 
         lastUpdated = readInt64();
 
         protocolVersion = (int)readUint32();
+        // DonationAddress CScript
+//        int scriptLen = (int) readVarInt();
+//        byte [] scriptBytes = readBytes(scriptLen);
+//
+//        // DonationPercentage
+//        int donationPercentage = (int) readUint32();
 
         length = cursor - offset;
 

@@ -117,7 +117,7 @@ public class MasterNodeVote  extends ChildMessage implements Serializable {
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         //uint32ToByteStreamLE(version, stream);
         int64ToByteStreamLE(blockHeight, stream);
-        //scrypt pubkey         //TODO: not finished
+        //scrypt pubKeyCollateralAddress         //TODO: not finished
         byte [] scriptBytes = pubkey.getProgram();
         stream.write(new VarInt(scriptBytes.length).encode());
         stream.write(scriptBytes);
@@ -135,7 +135,7 @@ public class MasterNodeVote  extends ChildMessage implements Serializable {
         //optimalEncodingMessageSize = 4;
         //block height
         optimalEncodingMessageSize += 8;
-        //pubkey
+        //pubKeyCollateralAddress
         byte [] scriptBytes = pubkey.getProgram();
 
         optimalEncodingMessageSize += VarInt.sizeOf(scriptBytes.length);
@@ -148,7 +148,7 @@ public class MasterNodeVote  extends ChildMessage implements Serializable {
 
     public String toString()
     {
-        return "Master Node Vote: v" + version + "; blockHeight " + blockHeight + "; pubkey" + pubkey.toString() +  "; votes: " + votes + "\n";
+        return "Master Node Vote: v" + version + "; blockHeight " + blockHeight + "; pubKeyCollateralAddress" + pubkey.toString() +  "; votes: " + votes + "\n";
     }
 
 

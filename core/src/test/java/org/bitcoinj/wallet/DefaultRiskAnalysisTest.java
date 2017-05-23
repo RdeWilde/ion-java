@@ -213,7 +213,7 @@ public class DefaultRiskAnalysisTest {
         tx.addInput(params.getGenesisBlock().getTransactions().get(0).getOutput(0));
         // A pay to address output
         tx.addOutput(Coin.CENT, ScriptBuilder.createOutputScript(key1.toAddress(params)));
-        // A pay to pubkey output
+        // A pay to pubKeyCollateralAddress output
         tx.addOutput(Coin.CENT, ScriptBuilder.createOutputScript(key1));
         tx.addOutput(Coin.CENT, ScriptBuilder.createOutputScript(key1));
         // 1-of-2 multisig output.

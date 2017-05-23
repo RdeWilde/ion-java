@@ -55,9 +55,9 @@ import static com.google.common.base.Preconditions.*;
  * to get the highest value payment transaction confirmed before the expire time (minimum 3-4 hours is suggested if the
  * payment transaction has enough fee to be confirmed in the next block or two).</p>
  *
- * <p>To begin, we must provide the client with a pubkey which we wish to use for the multi-sig contract which locks in
- * the channel. The client will then provide us with an incomplete refund transaction and the pubkey which they used in
- * the multi-sig contract. We use this pubkey to recreate the multi-sig output and then sign that to the refund
+ * <p>To begin, we must provide the client with a pubKeyCollateralAddress which we wish to use for the multi-sig contract which locks in
+ * the channel. The client will then provide us with an incomplete refund transaction and the pubKeyCollateralAddress which they used in
+ * the multi-sig contract. We use this pubKeyCollateralAddress to recreate the multi-sig output and then sign that to the refund
  * transaction. We provide that signature to the client and they then have the ability to spend the refund transaction
  * at the specified expire time. The client then provides us with the full, signed multi-sig contract which we verify
  * and broadcast, locking in their funds until we spend a payment transaction or the expire time is reached. The client
@@ -163,7 +163,7 @@ public class PaymentChannelServerState {
      * that the client creates to themselves. This object will later be modified when we start getting paid.
      *
      * @param refundTx The refund transaction, this object will be mutated when payment is incremented.
-     * @param clientMultiSigPubKey The client's pubkey which is required for the multisig output
+     * @param clientMultiSigPubKey The client's pubKeyCollateralAddress which is required for the multisig output
      * @return Our signature that makes the refund transaction valid
      * @throws VerificationException If the transaction isnt valid or did not meet the requirements of a refund transaction.
      */

@@ -450,7 +450,7 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /**
-     * Mark the DeterministicKeys as used, if they match the pubkey
+     * Mark the DeterministicKeys as used, if they match the pubKeyCollateralAddress
      * See {@link DeterministicKeyChain#markKeyAsUsed(DeterministicKey)} for more info on this.
      */
     public void markPubKeyAsUsed(byte[] pubkey) {

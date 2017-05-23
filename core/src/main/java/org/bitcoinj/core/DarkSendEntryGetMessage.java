@@ -80,6 +80,9 @@ public class DarkSendEntryGetMessage extends Message {
         long sequence = readUint32();
         vin = new TransactionInput(params, null, scriptBytes, outpoint);
 
+//        vin = new TransactionInput(params, null, payload, cursor);
+//        cursor += vin.getMessageSize();
+
         optimalEncodingMessageSize += outpoint.getMessageSize() + scriptLen + VarInt.sizeOf(scriptLen) +4;
 
          length = cursor - offset;

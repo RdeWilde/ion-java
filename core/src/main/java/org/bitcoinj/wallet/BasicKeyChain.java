@@ -238,7 +238,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
     }
 
     /**
-     * Returns whether this chain consists of pubkey only (watching) keys, regular keys (usable for signing), or
+     * Returns whether this chain consists of pubKeyCollateralAddress only (watching) keys, regular keys (usable for signing), or
      * has no keys in it yet at all (thus we cannot tell).
      */
     public State isWatching() {

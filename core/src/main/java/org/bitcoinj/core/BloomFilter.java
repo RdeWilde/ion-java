@@ -42,11 +42,11 @@ import static java.lang.Math.*;
  */
 public class BloomFilter extends Message {
     /** The BLOOM_UPDATE_* constants control when the bloom filter is auto-updated by the peer using
-        it as a filter, either never, for all outputs or only for pay-2-pubkey outputs (default) */
+        it as a filter, either never, for all outputs or only for pay-2-pubKeyCollateralAddress outputs (default) */
     public enum BloomUpdate {
         UPDATE_NONE, // 0
         UPDATE_ALL, // 1
-        /** Only adds outpoints to the filter if the output is a pay-to-pubkey/pay-to-multisig script */
+        /** Only adds outpoints to the filter if the output is a pay-to-pubKeyCollateralAddress/pay-to-multisig script */
         UPDATE_P2PUBKEY_ONLY //2
     }
     

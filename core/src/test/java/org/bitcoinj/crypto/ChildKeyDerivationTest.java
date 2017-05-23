@@ -176,8 +176,8 @@ public class ChildKeyDerivationTest {
         key2 = key2.dropPrivateBytes();
         assertFalse(key2.isPubKeyOnly());   // still got private key bytes from the parents!
 
-        // pubkey2 got its cached private key bytes (if any) dropped, and now it'll lose its parent too, so now it
-        // becomes a true pubkey-only object.
+        // pubKeyMasternode got its cached private key bytes (if any) dropped, and now it'll lose its parent too, so now it
+        // becomes a true pubKeyCollateralAddress-only object.
         DeterministicKey pubkey2 = key2.dropParent();
 
         DeterministicKey pubkey3 = HDKeyDerivation.deriveChildKey(pubkey2, ChildNumber.ZERO);

@@ -28,7 +28,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.script.ScriptOpCodes.*;
 
 /**
- * An element that is either an opcode or a raw byte array (signature, pubkey, etc).
+ * An element that is either an opcode or a raw byte array (signature, pubKeyCollateralAddress, etc).
  */
 public class ScriptChunk {
     public final int opcode;

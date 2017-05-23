@@ -24,7 +24,7 @@ import java.util.Arrays;
 /**
  * Parses and generates private keys in the form used by the Bitcoin "dumpprivkey" command. This is the private key
  * bytes with a header byte and 4 checksum bytes at the end. If there are 33 private key bytes instead of 32, then
- * the last byte is a discriminator value for the compressed pubkey.
+ * the last byte is a discriminator value for the compressed pubKeyCollateralAddress.
  */
 public class DumpedPrivateKey extends VersionedChecksummedBytes {
     private boolean compressed;

@@ -228,7 +228,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
      *                         If you want a safe default, use {@link Transaction#REFERENCE_DEFAULT_MIN_TX_FEE}*3
      */
     public Coin getMinNonDustValue(Coin feePerKbRequired) {
-        // A typical output is 33 bytes (pubkey hash + opcodes) and requires an input of 148 bytes to spend so we add
+        // A typical output is 33 bytes (pubKeyCollateralAddress hash + opcodes) and requires an input of 148 bytes to spend so we add
         // that together to find out the total amount of data used to transfer this amount of value. Note that this
         // formula is wrong for anything that's not a pay-to-address output, unfortunately, we must follow the reference
         // clients wrongness in order to ensure we're considered standard. A better formula would either estimate the
@@ -349,7 +349,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
             if (script.isSentToAddress() || script.isPayToScriptHash())
                 buf.append(" to ").append(script.getToAddress(params));
             else if (script.isSentToRawPubKey())
-                buf.append(" to pubkey ").append(Utils.HEX.encode(script.getPubKey()));
+                buf.append(" to pubKeyCollateralAddress ").append(Utils.HEX.encode(script.getPubKey()));
             else if (script.isSentToMultiSig())
                 buf.append(" to multisig");
             else

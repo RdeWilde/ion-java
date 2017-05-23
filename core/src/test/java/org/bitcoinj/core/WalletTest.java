@@ -2904,7 +2904,7 @@ public class WalletTest extends TestWithWallet {
         ECKey pub = ECKey.fromPublicOnly(priv.getPubKeyPoint());
         wallet.importKey(pub);
         ECKey priv2 = wallet.freshReceiveKey();
-        // Send three transactions, with one being an address type and the other being a raw CHECKSIG type pubkey only,
+        // Send three transactions, with one being an address type and the other being a raw CHECKSIG type pubKeyCollateralAddress only,
         // and the final one being a key we do have. We expect the first two inputs to be dummy values and the last
         // to be signed correctly.
         Transaction t1 = sendMoneyToWallet(wallet, CENT, pub.toAddress(params), AbstractBlockChain.NewBlockType.BEST_CHAIN);

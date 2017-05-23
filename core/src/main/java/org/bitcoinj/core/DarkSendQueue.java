@@ -217,7 +217,7 @@ public class DarkSendQueue extends Message implements Serializable {
                 String strMessage = vin.toString() + denom + time + ready;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if(!DarkSendSigner.verifyMessage(ECKey.fromPublicOnly(mn.pubkey2.getBytes()), vchSig, strMessage, errorMessage)){
+                if(!DarkSendSigner.verifyMessage(ECKey.fromPublicOnly(mn.pubKeyMasternode.getBytes()), vchSig, strMessage, errorMessage)){
                     log.error("CDarksendQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.toString());
                     return false;
                 }

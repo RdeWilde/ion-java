@@ -1661,11 +1661,11 @@ public final class PeerSeedProtos {
     com.google.protobuf.ByteString getSignature();
 
     /**
-     * <code>required bytes pubkey = 3;</code>
+     * <code>required bytes pubKeyCollateralAddress = 3;</code>
      */
     boolean hasPubkey();
     /**
-     * <code>required bytes pubkey = 3;</code>
+     * <code>required bytes pubKeyCollateralAddress = 3;</code>
      */
     com.google.protobuf.ByteString getPubkey();
   }
@@ -1809,13 +1809,13 @@ public final class PeerSeedProtos {
     public static final int PUBKEY_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString pubkey_;
     /**
-     * <code>required bytes pubkey = 3;</code>
+     * <code>required bytes pubKeyCollateralAddress = 3;</code>
      */
     public boolean hasPubkey() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>required bytes pubkey = 3;</code>
+     * <code>required bytes pubKeyCollateralAddress = 3;</code>
      */
     public com.google.protobuf.ByteString getPubkey() {
       return pubkey_;
@@ -2180,19 +2180,19 @@ public final class PeerSeedProtos {
 
       private com.google.protobuf.ByteString pubkey_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>required bytes pubkey = 3;</code>
+       * <code>required bytes pubKeyCollateralAddress = 3;</code>
        */
       public boolean hasPubkey() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required bytes pubkey = 3;</code>
+       * <code>required bytes pubKeyCollateralAddress = 3;</code>
        */
       public com.google.protobuf.ByteString getPubkey() {
         return pubkey_;
       }
       /**
-       * <code>required bytes pubkey = 3;</code>
+       * <code>required bytes pubKeyCollateralAddress = 3;</code>
        */
       public Builder setPubkey(com.google.protobuf.ByteString value) {
         if (value == null) {
@@ -2204,7 +2204,7 @@ public final class PeerSeedProtos {
         return this;
       }
       /**
-       * <code>required bytes pubkey = 3;</code>
+       * <code>required bytes pubKeyCollateralAddress = 3;</code>
        */
       public Builder clearPubkey() {
         bitField0_ = (bitField0_ & ~0x00000004);

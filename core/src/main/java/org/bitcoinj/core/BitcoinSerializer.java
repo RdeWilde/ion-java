@@ -75,11 +75,12 @@ public class BitcoinSerializer {
 
         //Dash specific messages
         names.put(DarkSendElectionEntryPingMessage.class, "dseep");
+        names.put(DarkSendElectionEntryMessage.class, "dsee");
 
-        names.put(TransactionLockRequest.class, "ix");
-        names.put(ConsensusVote.class, "txlvote");
+        names.put(TransactionLockRequest.class, "txlreq");
+        names.put(TransactionLockVote.class, "txlvote");
 
-        names.put(MasternodeBroadcast.class, "mnb");
+        names.put(MasternodeBroadcast.class, "mnget");
         names.put(MasternodePing.class, "mnp");
         names.put(SporkMessage.class, "spork");
         names.put(GetSporksMessage.class, "getsporks");
@@ -162,7 +163,7 @@ public class BitcoinSerializer {
         // The checksum is the first 4 bytes of a SHA256 hash of the message payload. It isn't
         // present for all messages, notably, the first one on a connection.
         //
-        // Satoshi's implementation ignores garbage before the magic header bytes. We have to do the same because
+        // Bitcoin Core ignores garbage before the magic header bytes. We have to do the same because
         // sometimes it sends us stuff that isn't part of any message.
         seekPastMagicBytes(in);
         BitcoinPacketHeader header = new BitcoinPacketHeader(in);
@@ -257,17 +258,21 @@ public class BitcoinSerializer {
             return new UTXOsMessage(params, payloadBytes);
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
-        } else if (command.equals("dsee")) {
-            return new DarkSendElectionEntryMessage(params, payloadBytes);
         } else if (command.equals("dseep")) {
             return new DarkSendElectionEntryPingMessage(params, payloadBytes);
+        } else if (command.equals("dsee")) {
+            return new DarkSendElectionEntryMessage(params, payloadBytes);
+        } else if (command.equals("dseg")) {
+            return new DarkSendEntryGetMessage(params, payloadBytes);
+        } else if (command.equals("txlreq")) {
+            return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("ix")) {
             return new TransactionLockRequest(params, payloadBytes);
         } else if (command.equals("txlvote")) {
-            return new ConsensusVote(params, payloadBytes);
+            return new TransactionLockVote(params, payloadBytes);
         } else if (command.equals("dsq")) {
             return new DarkSendQueue(params, payloadBytes);
-        } else if (command.equals("mnb")) {
+        } else if (command.equals("mnget")) {
             return new MasternodeBroadcast(params, payloadBytes);
         } else if( command.equals("mnp")) {
             return new MasternodePing(params, payloadBytes);
@@ -275,8 +280,14 @@ public class BitcoinSerializer {
             return new SporkMessage(params, payloadBytes, 0);
         } else if(command.equals("ssc")) {
             return new SyncStatusCount(params, payloadBytes);
-        }
-        else{
+//        } else if(command.equals("sendheaders")) {
+//            return new SendHeadersMessage(params);
+        } else if(command.equals("getsporks")) {
+            return new GetSporksMessage(params);
+//        }
+//        else if(command.equals("govsync")) {
+//            return new GovernanceSyncMessage(params);
+        } else{
             log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }
@@ -347,7 +358,7 @@ public class BitcoinSerializer {
             size = (int) readUint32(header, cursor);
             cursor += 4;
 
-            if (size > Message.MAX_SIZE)
+            if (size > Message.MAX_SIZE || size < 0)
                 throw new ProtocolException("Message size too large: " + size);
 
             // Old clients don't send the checksum.

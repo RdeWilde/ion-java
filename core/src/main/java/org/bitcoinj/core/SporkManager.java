@@ -88,7 +88,7 @@ public class SporkManager {
 
     public  static final int  SPORK_2_INSTANTX     =                                 10001;
     public  static final int  SPORK_3_INSTANTX_BLOCK_FILTERING =                     10002;
-    public  static final int  SPORK_5_MAX_VALUE                            =         10004;
+    public  static final int SPORK_5_INSTANTSEND_MAX_VALUE =         10004;
     public  static final int  SPORK_7_MASTERNODE_SCANNING                  =         10006;
     public  static final int  SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT       =         10007;
     public  static final int  SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT        =         10008;
@@ -118,7 +118,7 @@ public class SporkManager {
         } else {
             if(nSporkID == SPORK_2_INSTANTX) r = SPORK_2_INSTANTX_DEFAULT;
             if(nSporkID == SPORK_3_INSTANTX_BLOCK_FILTERING) r = SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT;
-            if(nSporkID == SPORK_5_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
+            if(nSporkID == SPORK_5_INSTANTSEND_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
             if(nSporkID == SPORK_7_MASTERNODE_SCANNING) r = SPORK_7_MASTERNODE_SCANNING_DEFAULT;
             if(nSporkID == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) r = SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT;
             if(nSporkID == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) r = SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT;
@@ -144,7 +144,7 @@ public class SporkManager {
         } else {
             if(nSporkID == SPORK_2_INSTANTX) r = SPORK_2_INSTANTX_DEFAULT;
             if(nSporkID == SPORK_3_INSTANTX_BLOCK_FILTERING) r = SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT;
-            if(nSporkID == SPORK_5_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
+            if(nSporkID == SPORK_5_INSTANTSEND_MAX_VALUE) r = SPORK_5_MAX_VALUE_DEFAULT;
             if(nSporkID == SPORK_7_MASTERNODE_SCANNING) r = SPORK_7_MASTERNODE_SCANNING_DEFAULT;
             if(nSporkID == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) r = SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT_DEFAULT;
             if(nSporkID == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) r = SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT_DEFAULT;
@@ -298,7 +298,7 @@ public class SporkManager {
     {
         if(strName == "SPORK_2_INSTANTX") return SPORK_2_INSTANTX;
         if(strName == "SPORK_3_INSTANTX_BLOCK_FILTERING") return SPORK_3_INSTANTX_BLOCK_FILTERING;
-        if(strName == "SPORK_5_MAX_VALUE") return SPORK_5_MAX_VALUE;
+        if(strName == "SPORK_5_INSTANTSEND_MAX_VALUE") return SPORK_5_INSTANTSEND_MAX_VALUE;
         if(strName == "SPORK_7_MASTERNODE_SCANNING") return SPORK_7_MASTERNODE_SCANNING;
         if(strName == "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT") return SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT;
         if(strName == "SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT") return SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT;
@@ -314,7 +314,7 @@ public class SporkManager {
     {
         if(id == SPORK_2_INSTANTX) return "SPORK_2_INSTANTX";
         if(id == SPORK_3_INSTANTX_BLOCK_FILTERING) return "SPORK_3_INSTANTX_BLOCK_FILTERING";
-        if(id == SPORK_5_MAX_VALUE) return "SPORK_5_MAX_VALUE";
+        if(id == SPORK_5_INSTANTSEND_MAX_VALUE) return "SPORK_5_INSTANTSEND_MAX_VALUE";
         if(id == SPORK_7_MASTERNODE_SCANNING) return "SPORK_7_MASTERNODE_SCANNING";
         if(id == SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT) return "SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT";
         if(id == SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT) return "SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT";

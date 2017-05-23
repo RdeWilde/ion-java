@@ -176,11 +176,11 @@ public class PeerGroup implements TransactionBroadcaster {
         @Override
         public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
             // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
-            // if we have received a transaction that includes a relevant pay-to-pubkey output.
+            // if we have received a transaction that includes a relevant pay-to-pubKeyCollateralAddress output.
             //
-            // The reason is that pay-to-pubkey outputs, when spent, will not repeat any data we can predict in their
+            // The reason is that pay-to-pubKeyCollateralAddress outputs, when spent, will not repeat any data we can predict in their
             // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
-            // existing filter, so that it includes the tx hash in which the pay-to-pubkey output was observed. Thus
+            // existing filter, so that it includes the tx hash in which the pay-to-pubKeyCollateralAddress output was observed. Thus
             // the spending transaction will always match (due to the outpoint structure).
             //
             // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
@@ -499,11 +499,20 @@ public class PeerGroup implements TransactionBroadcaster {
                 // First run: try and use a local node if there is one, for the additional security it can provide.
                 // But, not on Android as there are none for this platform: it could only be a malicious app trying
                 // to hijack our traffic.
-                if (useLocalhostPeerWhenPossible && maybeCheckForLocalhostPeer() && firstRun) {
-                    log.info("Localhost peer detected, trying to use it instead of P2P discovery");
-                    maxConnections = 0;
-                    connectToLocalHost();
-                    return;
+                if (useLocalhostPeerWhenPossible && firstRun) {
+                    Thread t = new Thread(){
+                        public void run(){
+                            if (maybeCheckForLocalhostPeer()) {
+                                log.info("Localhost peer detected, trying to use it instead of P2P discovery");
+                                maxConnections = 0;
+                                for (PeerDiscovery peerDiscovery : peerDiscoverers) {
+                                    peerDiscovery.shutdown();
+                                }
+                                backoffMap.clear();
+                                connectToLocalHost();
+                            }
+                        }
+                    };
                 }
 // Indien geen peers maar wel een backoffMap met peers voor later, gaat dit als een malle lussen. TODO FIXME
                 boolean havePeerWeCanTry = !inactives.isEmpty() && backoffMap.get(inactives.peek()).getRetryTime() <= now;
@@ -897,7 +906,7 @@ public class PeerGroup implements TransactionBroadcaster {
         vRunning = true;
         vUsedUp = true;
         executorStartupLatch.countDown();
-        // We do blocking waits during startup, so run on the executor thread.
+//        // We do blocking waits during startup, so run on the executor thread.
         return executor.submit(new Runnable() {
             @Override
             public void run() {
@@ -913,6 +922,7 @@ public class PeerGroup implements TransactionBroadcaster {
                         }
                         log.info("Tor ready");
                     }
+                    
                     channels.startAsync();
                     channels.awaitRunning();
                     triggerConnections();
@@ -1291,10 +1301,15 @@ public class PeerGroup implements TransactionBroadcaster {
     public void startBlockChainDownload(PeerEventListener listener) {
         lock.lock();
         try {
-            if (downloadPeer != null && this.downloadListener != null)
-                downloadPeer.removeEventListener(this.downloadListener);
-            if (downloadPeer != null && listener != null)
-                downloadPeer.addEventListener(listener);
+            if (downloadPeer != null) {
+                if (this.downloadListener != null) {
+                    downloadPeer.removeEventListener(this.downloadListener);
+                }
+                if (listener != null) {
+                    downloadPeer.addEventListener(listener);
+                }
+            }
+
             this.downloadListener = listener;
             // TODO: be more nuanced about which peer to download from.  We can also try
             // downloading from multiple peers and handle the case when a new peer comes along

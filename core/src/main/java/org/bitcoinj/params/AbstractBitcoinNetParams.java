@@ -16,14 +16,14 @@
 
 package org.bitcoinj.params;
 
-import java.math.BigInteger;
-
 import org.bitcoinj.core.*;
-import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.math.BigInteger;
 
 /**
  * Parameters for Bitcoin-like networks.
@@ -143,5 +143,10 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     @Override
     public boolean hasMaxMoney() {
         return true;
+    }
+
+    @Override
+    public int getProtocolVersionNum(final ProtocolVersion version) {
+        return version.getBitcoinProtocolVersion();
     }
 }

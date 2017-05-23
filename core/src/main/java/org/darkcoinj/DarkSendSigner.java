@@ -19,7 +19,7 @@ public class DarkSendSigner {
     public static boolean isVinAssociatedWithPubkey(NetworkParameters params, TransactionInput vin, PublicKey pubkey) {
         //TODO:  This function requires the blockchain!  we don't have it
        Script payee2 = ScriptBuilder.createOutputScript(new Address(params, ECKey.fromPublicOnly(pubkey.getBytes()).getPubKeyHash()));
-        //payee2.SetDestination(pubkey.GetID());
+        //payee2.SetDestination(pubKeyCollateralAddress.GetID());
 
         Transaction txVin;
         Sha256Hash hash;
@@ -77,7 +77,7 @@ public class DarkSendSigner {
         PublicKey pubkey2;
 
         try {
-            //pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
+            //pubKeyMasternode = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
 
             ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
 
@@ -85,16 +85,16 @@ public class DarkSendSigner {
 
             //ECKey.verify()
 
-            //if(DarkCoinSystem.fDebug && !pubkey.getId().equals(pubkey2.getId()))
-            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getId().toString()+ " " + pubkey.getId().toString());
+            //if(DarkCoinSystem.fDebug && !pubKeyCollateralAddress.getId().equals(pubKeyMasternode.getId()))
+            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubKeyMasternode.getId().toString()+ " " + pubKeyCollateralAddress.getId().toString());
 
-            //return pubkey.getId().equals(pubkey2.getId());
+            //return pubKeyCollateralAddress.getId().equals(pubKeyMasternode.getId());
             return true;
 
         }
         catch(SignatureException x)
         {
-            errorMessage.append("Error recovering pubkey: "+x.getMessage());
+            errorMessage.append("Error recovering pubKeyCollateralAddress: "+x.getMessage());
 
 
             return false;
@@ -114,15 +114,15 @@ public class DarkSendSigner {
         PublicKey pubkey2;
 
         try {
-           // pubkey2 = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
+           // pubKeyMasternode = PublicKey.recoverCompact(Sha256Hash.twiceOf(dataToHash), vchSig);
 
 
             //ECKey.verify()
 
-            //if(DarkCoinSystem.fDebug && !pubkey.getId().equals(pubkey2.getId()));
-            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubkey2.getId().toString()+ " " + pubkey.getId().toString());
+            //if(DarkCoinSystem.fDebug && !pubKeyCollateralAddress.getId().equals(pubKeyMasternode.getId()));
+            //    log.info("DarkSendSigner.verifyMessage -- keys don't match: " + pubKeyMasternode.getId().toString()+ " " + pubKeyCollateralAddress.getId().toString());
 
-            //return pubkey.getId().equals(pubkey2.getId());
+            //return pubKeyCollateralAddress.getId().equals(pubKeyMasternode.getId());
             //return true;
 
             ECKey pubkey1 = ECKey.fromPublicOnly(pubkey.getBytes());
@@ -134,7 +134,7 @@ public class DarkSendSigner {
         }
         catch(SignatureException x)
         {
-            errorMessage.append("Error recovering pubkey: "+x.getMessage());
+            errorMessage.append("Error recovering pubKeyCollateralAddress: "+x.getMessage());
 
 
             return false;

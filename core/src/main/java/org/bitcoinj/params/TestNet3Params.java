@@ -18,14 +18,10 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
-
-import java.math.BigInteger;
-import java.util.Date;
-
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
-import static com.google.common.base.Preconditions.checkState;
+import java.math.BigInteger;
 
 /**
  * Parameters for the testnet, a separate public instance of Bitcoin that has relaxed rules suitable for development
@@ -53,7 +49,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash)); // TODO testcheckpoint[0]
+//        checkState(genesisHash.equals(CoinDefinition.testnetGenesisHash)); // TODO testcheckpoint[0]
         alertSigningKey = Utils.HEX.decode(CoinDefinition.testBlackAlertSigningKey);
 
         dnsSeeds = CoinDefinition.testnetDnsSeeds;

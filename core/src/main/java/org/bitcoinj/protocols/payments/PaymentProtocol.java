@@ -195,7 +195,7 @@ public class PaymentProtocol {
             // Revocation not supported in the current version.
             params.setRevocationEnabled(false);
 
-            // Now verify the certificate chain is correct and trusted. This let's us get an identity linked pubkey.
+            // Now verify the certificate chain is correct and trusted. This let's us get an identity linked pubKeyCollateralAddress.
             CertPathValidator validator = CertPathValidator.getInstance("PKIX");
             PKIXCertPathValidatorResult result = (PKIXCertPathValidatorResult) validator.validate(path, params);
             java.security.PublicKey publicKey = result.getPublicKey();

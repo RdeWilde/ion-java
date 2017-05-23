@@ -153,7 +153,7 @@ public class PaymentChannelClientState {
      *              It is suggested you use at least {@link Coin#CENT} to avoid paying fees if you need to spend the refund transaction
      * @param expiryTimeInSeconds At what point (UNIX timestamp +/- a few hours) the channel will expire
      *
-     * @throws VerificationException If either myKey's pubkey or serverMultisigKey's pubkey are non-canonical (ie invalid)
+     * @throws VerificationException If either myKey's pubKeyCollateralAddress or serverMultisigKey's pubKeyCollateralAddress are non-canonical (ie invalid)
      */
     public PaymentChannelClientState(Wallet wallet, ECKey myKey, ECKey serverMultisigKey,
                                      Coin value, long expiryTimeInSeconds) throws VerificationException {

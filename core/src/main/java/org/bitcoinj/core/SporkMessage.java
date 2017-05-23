@@ -1,13 +1,8 @@
 package org.bitcoinj.core;
 
-import org.bitcoinj.utils.Threading;
-import org.darkcoinj.DarkSend;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static com.hashengineering.crypto.X11.x11Digest;
 
@@ -53,10 +48,10 @@ public class SporkMessage extends Message{
 
         //MasternodeAddress address;
         cursor += MasternodeAddress.MESSAGE_SIZE;
-        //PublicKey pubkey;
+        //PublicKey pubKeyCollateralAddress;
         cursor += PublicKey.calcLength(buf, cursor);
 
-        //PublicKey pubkey2;
+        //PublicKey pubKeyMasternode;
         cursor += PublicKey.calcLength(buf, cursor);
 
         // byte [] sig;

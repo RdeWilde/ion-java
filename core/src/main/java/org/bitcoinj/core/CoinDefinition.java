@@ -1,8 +1,6 @@
 package org.bitcoinj.core;
 
 import java.math.BigInteger;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.Map;
 
 /**
@@ -25,18 +23,18 @@ public class CoinDefinition {
 
     // To decrease granularity of timestamp
     // Supposed to be 2^n-1
-    public static final int stakeTimestampMask = 15; // kernel.h
-    public static final long futureDrift = 120; // TODO
+    public static final int stakeTimestampMask = 15; // stake.h STAKE_TIMESTAMP_MASK
+    public static final long futureDrift = 16200;
     public static final long minerMiliSleep = 500; // TODO
     //common to all coins
     public static final int bulgarianConst = 128;
-    //main.cpp#L2822 pchMessageStart[4] = { 0x70, 0x35, 0x22, 0x05 };
-    public static final long packetMagic = 0xbff41ab6;
-    public static final String checkpoint0 = "000001a7bb3214e3e1d2e4c256082b817a3c5dff5def37456ae16d7edaa508be";
-    public static final String blackAlertSigningKey = "";
-    public static final int ionv = 0x0488B21E; // TODO
-    public static final int ionp = 0x0488ADE4; // TODO
-    public static final int stakeMinConfirmations = 30; // main.cpp
+    //main.cpp#L2822 pchMessageStart[4] = { 0xc4, 0xe1, 0xd8, 0xec };
+    public static final long packetMagic = 0xc4e1d8ec;
+    public static final String checkpoint0 = "0000004cf5ffbf2e31a9aa07c86298efb01a30b8911b80af7473d1114715084b";
+    public static final String blackAlertSigningKey = "040fd972dba056779d9f998cba8d5866e47fb875fd8cb9c4d36baf88db738a6ffbc581e0fad7f2f129c7f814d81baeda567a3735aaf0bfbc339f40359d4a52b4bf";
+    public static final int ionv = 0x0488B21E;
+    public static final int ionp = 0x0488ADE4;
+    public static final int stakeMinConfirmations = 60; // main.cpp // TODO check
     public static final long dust = 546;
 
     public enum CoinPrecision {
@@ -55,13 +53,13 @@ public class CoinDefinition {
     };
     public static final UnspentAPIType UnspentAPI = UnspentAPIType.Cryptoid;
 
-    public static final String BLOCKEXPLORER_BASE_URL_PROD = "https://ionchain.com/";
-    public static final String BLOCKEXPLORER_ADDRESS_PATH = "address/";             //blockr.io path
-    public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx/";              //blockr.io path
-    public static final String BLOCKEXPLORER_BLOCK_PATH = "block/";                 //blockr.io path
-    public static final String BLOCKEXPLORER_BASE_URL_TEST = "https://testnet.ionchain.com/";
+    public static final String BLOCKEXPLORER_BASE_URL_PROD = "https://chainz.cryptoid.info/ion/";
+    public static final String BLOCKEXPLORER_ADDRESS_PATH = "address.dws?";             //blockr.io path
+    public static final String BLOCKEXPLORER_TRANSACTION_PATH = "tx.dws?";              //blockr.io path
+    public static final String BLOCKEXPLORER_BLOCK_PATH = "block.dws?";                 //blockr.io path
+    public static final String BLOCKEXPLORER_BASE_URL_TEST = "https://testnet.chainz.cryptoid.info/ion/";
 
-    public static final String DONATION_ADDRESS = "iZbDhBuCqq6NntURxHo5s5S5a7oYcFaZcY";  //Hash Engineering donation DASH address
+    public static final String DONATION_ADDRESS = "ikna4mSLeUJP5fRuKwNBCp5x54yb5wbEXQ";  //Hash Engineering donation DASH address
 
     enum CoinHash {
         SHA256,
@@ -74,27 +72,27 @@ public class CoinDefinition {
 //    public static boolean checkpointFileSupport = true;
 
     public static final int targetTimespan = (int)(2 * 60);  //main.cpp#L988 nTargetTimespan = 2 * 60; // per difficulty cycle, on average.
-    public static final int targetSpacing = 1 * 60;     //main.cpp#L43 nTargetSpacing = 1 * 60;
-    public static final int targetSpacing2 = 1 * 60;    // ^ main.h#L97~
-    public static final int interval = targetTimespan / targetSpacing;
+    public static final int targetSpacing = 64;     //proofs.h#L19 nTargetSpacing = 1 * 60;
+    public static final int targetSpacing2 = 64;    // ^ main.h#L97~
+    public static final int interval = 10; //targetTimespan / targetSpacing;
 
     //main.cpp#L48 nCoinbaseMaturity = 500
-    public static int spendableCoinbaseDepth = 30; //main.h: static const int COINBASE_MATURITY
-    public static final long maxCoins = 20000000;                 //main.h:  MAX_MONEY
-    public static final int maxBlockSize = 8000000;          // main.h MAX_BLOCK_SIZE
+    public static int spendableCoinbaseDepth = 60; //proofs.cpp: DetermineCoinbaseMaturity
+    public static final long maxCoins = 21000000;                 //main.h:  MAX_MONEY
+    public static final int maxBlockSize = 20000000;          // main.h MAX_BLOCK_SIZE
 
-    public static final long minTxFee = Coin.valueOf(1000).longValue();
+    public static final long minTxFee = Coin.CENT.divide(10).longValue(); // TODO FIXME main.h#L53 MIN_TX_FEE 0.01
 //    public static final long DUST_LIMIT = Coin.valueOf(1000).longValue(); //main.h CTransaction::GetMinFee
-    public static final long INSTANTX_FEE = Coin.valueOf(10000).longValue();
+    public static final long INSTANTX_FEE = Coin.CENT.longValue(); // TODO Is never used in wallet code, hardcoded instead
     //
     // Ion
     //
 
-    public static final int protocolVersion = 60027;
-    public static final int minProtocolVersion = 60016;
+    public static final int protocolVersion = 95605;
+    public static final int minProtocolVersion = 95050; // MIN_PEER_PROTO_VERSION
     public static final long blockVersion = 7;
     public static final int protocolV1RetargetingFixed = 0; // main.h
-    public static final long txTimeProtocolV3 = 1446249600; // main.h
+    public static final long txTimeProtocolV3 = 0; // main.h // TODO ?
 
     public static final String localNode = Utils.isAndroidRuntime() ? "10.0.2.2" : "127.0.0.1";
 
@@ -112,16 +110,16 @@ public class CoinDefinition {
     public static int minBroadcastConnections = 0;   //0 for default; we need more peers.
 
     // TODO
-    public static int subsidyDecreaseBlockCount = 525600;  // TODO   //main.cpp GetBlockValue(height, fee)
+    public static int subsidyDecreaseBlockCount = 525600;  // TODO FIXME !
 
     public static BigInteger proofOfWorkLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
-    public static BigInteger testnetProofOfWorkLimit = Utils.decodeCompactBits(0x1f00ffffL);
+    public static BigInteger testnetProofOfWorkLimit = Utils.decodeCompactBits(0x1e00ffffL);
 
-    public static BigInteger proofOfStakeLimit = Utils.decodeCompactBits(0x1e0fffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
-    public static BigInteger testnetProofOfStakeLimit = Utils.decodeCompactBits(0x1e0fffffL);
+    public static BigInteger proofOfStakeLimit = Utils.decodeCompactBits(0x1e00ffffL);  //main.cpp bnProofOfWorkLimit (~uint256(0) >> 20);
+    public static BigInteger testnetProofOfStakeLimit = Utils.decodeCompactBits(0x1e00ffffL);
 
 
-    public static BigInteger maxTarget  = Utils.decodeCompactBits(0x1f00ffffL); // POW limit
+    public static BigInteger maxTarget  = Utils.decodeCompactBits(0x1e0fffffL); //0x1e00ffffL// POW limit   // TODO Not used?
 
     /** The string returned by getId() for the main, production network where people trade things. */
     public static final String ID_MAINNET = "com.ionomy.production";
@@ -136,22 +134,22 @@ public class CoinDefinition {
     //
     // MAINNET
     //
-    public static final int port = 58273; // 45104 //protocol.h GetDefaultPort(testnet=false)
+    public static final int port = 12700; // chainparams
 
     //Genesis Block Information from main.cpp: LoadBlockIndex
     ///main.cpp#L2521 nBits=1e0fffff
-    public static final long genesisDifficultyTarget = (0x1e0fffffL);
+    public static final long genesisDifficultyTarget = (0x1e00ffffL);
 
     //clientmodel.cpp#L56 fromTime_t(1458750507L); // Genesis block's genesisBlockTime
-    static public long genesisBlockTime = 1458750507L;                       //main.cpp: LoadBlockIndex
+    static public long genesisBlockTime = 1486045800L;                       //main.cpp: LoadBlockIndex
     //main.cpp#L2521 nNonce=164482
-    static public long genesisBlockNonce = (468977L);                         //main.cpp: LoadBlockIndex
+    static public long genesisBlockNonce = (28884498L);                         //main.cpp: LoadBlockIndex
 
     //base58.h#L279 PUBKEY_ADDRESS = 25
     public static final int addressHeader = 103;             //base58.h CBitcoinAddress::PUBKEY_ADDRESS
     public static final int p2shHeader = 88;             //base58.h CBitcoinAddress::SCRIPT_ADDRESS
-    static public String genesisHash = "000001a7bb3214e3e1d2e4c256082b817a3c5dff5def37456ae16d7edaa508be"; //main.cpp: hashGenesisBlock
-    static public String genesisMerkleRoot = "a1de9df44936bd1dd483e217fa17ec1881d2caf741ca67a33f6cd6850183078c"; // ? or is this block 1 TODO
+    static public String genesisHash = "0000004cf5ffbf2e31a9aa07c86298efb01a30b8911b80af7473d1114715084b"; //main.cpp: hashGenesisBlock
+    static public String genesisMerkleRoot = "7af2e961c5262cb0411edcb7414ab7178133fc06257ceb47d349e4e5e35e2d40"; // ? or is this block 1 TODO
     // TODO Testnet ^^
 //    static public int genesisBlockValue = 10900000;                                                              //main.cpp: LoadBlockIndex
     //taken from the raw data of the block explorer
@@ -160,15 +158,14 @@ public class CoinDefinition {
 
     //net.cpp strDNSSeed
     static public String[] dnsSeeds = new String[] {
-            "dnsseed.ionomy.com",
-            "45.32.211.127",
-            "main.seed.ionomy.nl"
+            "main.seeder.baseserv.com",
+            "main.seeder.uksafedns.net"
     };
 
 
     //
     // TestNet
-    //
+    // TODO FIXME all
     public static final int testPort = 51002;     //protocol.h GetDefaultPort(testnet=true)
     public static String testBlackAlertSigningKey = ""; // TODO
     public static final boolean supportsTestNet = true;
@@ -195,14 +192,14 @@ public class CoinDefinition {
     public static final String UNITTEST_ADDRESS = "";
     public static final String UNITTEST_ADDRESS_PRIVATE_KEY = "";
 
-
+    // TODO FIXME
     //main.cpp GetBlockValue(height, fee)
     public static final Coin GetBlockReward(int height)
     {
         int COIN = 1;
         Coin nSubsidy = Coin.valueOf(0, 0);
-        if (height == 1)
-            nSubsidy = Coin.valueOf(420000, 0);
+        if (height >= 1000)
+            nSubsidy = Coin.valueOf(230000, 0);
         return nSubsidy;
     }
 
@@ -211,8 +208,13 @@ public class CoinDefinition {
     {
         // TODO
         // checkpoints.put(  11111, Sha256Hash.wrap("c195054e4ee5b2db531cb8f4c2a336a15ca0969406709f4930297d88e825cbb6"));
-        // TODO
-        // checkpoints.put(  33333, Sha256Hash.wrap("56b21543820df6d2bd45771452a47ee41594ae6475ab6fed6b942a6bf8d03841"));
+//        (0,     Params().HashGenesisBlock())
+//        (1,     uint256("0x000000ed2f68cd6c7935831cc1d473da7c6decdb87e8b5dba0afff0b00002690") ) // Premine
+//        (10,    uint256("0x00000032f5a96d31d74b380c0336445baccb73a01bdbedec868283019bad7016") )  // Confirmation of Premine
+//        (22,    uint256("0x00000002e04f91402d78b84433ec744aacac5c40952b918fe09a7d623ac33967") )
+//        (32,    uint256("0x0000001880da8fd09cc6f5e93315135fe686eb49f9054c807fa810d56ebb013b") )
+//        (35,    uint256("0x0000000af6204fd43bb9cafea1dd192c245979d4dd7bde19efb92f633589ade5") )
+//        (45, uint256("0x00000006d6b9e9fba4dee10bc63ca7ea764c80c2b9c4fa6ddedb944eb288a371") )
     }
 
 //    public static final int getInterval(int height, boolean testNet) {

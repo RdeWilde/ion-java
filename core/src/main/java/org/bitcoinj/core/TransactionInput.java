@@ -423,7 +423,7 @@ public class TransactionInput extends ChildMessage implements Serializable {
     }
 
     /**
-     * For a connected transaction, runs the script against the connected pubkey and verifies they are correct.
+     * For a connected transaction, runs the script against the connected pubKeyCollateralAddress and verifies they are correct.
      * @throws ScriptException if the script did not verify.
      * @throws VerificationException If the outpoint doesn't match the given output.
      */

@@ -596,7 +596,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // Create a couple of peers.
         InboundMessageQueuer p1 = connectPeer(1);
         InboundMessageQueuer p2 = connectPeer(2);
-        // Create a pay to pubkey tx.
+        // Create a pay to pubKeyCollateralAddress tx.
         Transaction tx = FakeTxBuilder.createFakeTx(params, COIN, key);
         Transaction tx2 = new Transaction(params);
         tx2.addInput(tx.getOutput(0));

@@ -24,7 +24,7 @@ import java.util.concurrent.Executor;
 
 /**
  * <p>A KeyChain is a class that stores a collection of keys for a {@link org.bitcoinj.core.Wallet}. Key chains
- * are expected to be able to look up keys given a hash (i.e. address) or pubkey bytes, and provide keys on request
+ * are expected to be able to look up keys given a hash (i.e. address) or pubKeyCollateralAddress bytes, and provide keys on request
  * for a given purpose. They can inform event listeners about new keys being added.</p>
  *
  * <p>However it is important to understand what this interface does <i>not</i> provide. It cannot encrypt or decrypt

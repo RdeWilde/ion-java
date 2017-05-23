@@ -17,15 +17,14 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.core.ECKey.ECDSASignature;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.core.ECKey.ECDSASignature;
+import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,14 +34,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import static org.bitcoinj.core.Coin.FIFTY_COINS;
-import static org.bitcoinj.core.Sha256Hash.ZERO_HASH;
 import static org.bitcoinj.core.Sha256Hash.hashTwice;
 
 //import com.sun.xml.internal.ws.api.config.management.policy.ManagedServiceAssertion;
@@ -240,6 +234,9 @@ public class Block extends Message {
 
     protected void parseTransactions() throws ProtocolException {
         if (transactionsParsed)
+            return;
+
+        if (payload == null)
             return;
 
         cursor = offset + HEADER_SIZE;
@@ -648,15 +645,15 @@ public class Block extends Message {
      */
     @Override
     public Sha256Hash getHash() {
-    	if(getPrevBlockHash().equals(Sha256Hash.ZERO_HASH) || getVersion() != CoinDefinition.blockVersion){
-			if (scryptHash == null)
-				scryptHash = calculateScryptHash();
-			return scryptHash;
-		}else {
+//    	if(getPrevBlockHash().equals(Sha256Hash.ZERO_HASH) || getVersion() != CoinDefinition.blockVersion){
+//			if (scryptHash == null)
+//				scryptHash = calculateScryptHash();
+//			return scryptHash;
+//		}else {
 			if (hash == null)
 	            hash = calculateHash();
 			return hash;
-		}
+//		}
     }
 
     /**
@@ -1123,7 +1120,7 @@ public class Block extends Message {
 
     /**
      * Returns a solved block that builds on top of this one. This exists for unit tests.
-     * In this variant you can specify a public key (pubkey) for use in generating coinbase blocks.
+     * In this variant you can specify a public key (pubKeyCollateralAddress) for use in generating coinbase blocks.
      */
     Block createNextBlock(@Nullable Address to, @Nullable TransactionOutPoint prevOut, long time,
                           byte[] pubKey, Coin coinbaseValue) {
@@ -1296,7 +1293,7 @@ public class Block extends Message {
         if (!genuine) {
             log.info("decoded blocksig " + decodedSignature);
             log.info("blockSig " + Utils.HEX.encode(blockSig));
-            log.info("pubkey " + Utils.HEX.encode(pubKey));
+            log.info("pubKeyCollateralAddress " + Utils.HEX.encode(pubKey));
             throw new VerificationException("Wrong Block signature");
         }
     }

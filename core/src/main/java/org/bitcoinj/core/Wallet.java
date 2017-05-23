@@ -17,35 +17,50 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.annotations.*;
-import com.google.common.base.*;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
-import com.google.common.base.Objects.*;
+import com.google.common.base.Objects.ToStringHelper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.*;
-import com.google.common.primitives.*;
-import com.google.common.util.concurrent.*;
-import com.google.protobuf.*;
-import net.jcip.annotations.*;
-import org.bitcoin.protocols.payments.Protos.*;
-import org.bitcoinj.core.TransactionConfidence.*;
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import com.google.protobuf.ByteString;
+import net.jcip.annotations.GuardedBy;
+import org.bitcoin.protocols.payments.Protos.PaymentDetails;
+import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.core.TransactionConfidence.IXType;
+import org.bitcoinj.core.TransactionConfidence.Source;
 import org.bitcoinj.crypto.*;
-import org.bitcoinj.params.*;
-import org.bitcoinj.script.*;
-import org.bitcoinj.signers.*;
-import org.bitcoinj.store.*;
-import org.bitcoinj.utils.*;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptChunk;
+import org.bitcoinj.signers.LocalTransactionSigner;
+import org.bitcoinj.signers.MissingSigResolutionSigner;
+import org.bitcoinj.signers.TransactionSigner;
+import org.bitcoinj.store.UnreadableWalletException;
+import org.bitcoinj.store.WalletProtobufSerializer;
+import org.bitcoinj.utils.BaseTaggableObject;
+import org.bitcoinj.utils.ExchangeRate;
+import org.bitcoinj.utils.ListenerRegistration;
+import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.*;
-import org.bitcoinj.wallet.Protos.Wallet.*;
-import org.bitcoinj.wallet.WalletTransaction.*;
-import org.slf4j.*;
-import org.spongycastle.crypto.params.*;
+import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
+import org.bitcoinj.wallet.WalletTransaction.Pool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
 
-import javax.annotation.*;
+import javax.annotation.Nullable;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
-import java.util.concurrent.locks.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -2288,16 +2303,48 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             // move any transactions that are now fully spent to the spent map so we can skip them when creating future
             // spends.
             updateForSpends(tx, false);
-            // Add to the pending pool. It'll be moved out once we receive this transaction on the best chain.
-            // This also registers txConfidenceListener so wallet listeners get informed.
-            log.info("->pending: {}", tx.getHashAsString());
-            if(tx instanceof TransactionLockRequest) //TODO:InstantX
+
+            Set<Transaction> doubleSpendPendingTxns = findDoubleSpendsAgainst(tx, pending);
+            Set<Transaction> doubleSpendUnspentTxns = findDoubleSpendsAgainst(tx, unspent);
+            Set<Transaction> doubleSpendSpentTxns = findDoubleSpendsAgainst(tx, spent);
+
+            if (!doubleSpendUnspentTxns.isEmpty() ||
+                    !doubleSpendSpentTxns.isEmpty() ||
+                    !isNotSpendingTxnsInConfidenceType(tx, ConfidenceType.DEAD)) {
+                // tx is a double spend against a tx already in the best chain or spends outputs of a DEAD tx.
+                // Add tx to the dead pool and schedule confidence listener notifications.
+                log.info("->dead: {}", tx.getHashAsString());
+                tx.getConfidence().setConfidenceType(ConfidenceType.DEAD);
+                confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
+                addWalletTransaction(Pool.DEAD, tx);
+            } else if (!doubleSpendPendingTxns.isEmpty() ||
+                    !isNotSpendingTxnsInConfidenceType(tx, ConfidenceType.IN_CONFLICT)) {
+                // tx is a double spend against a pending tx or spends outputs of a tx already IN_CONFLICT.
+                // Add tx to the pending pool. Update the confidence type of tx, the txns in conflict with tx and all
+                // their dependencies to IN_CONFLICT and schedule confidence listener notifications.
+                log.info("->pending (IN_CONFLICT): {}", tx.getHashAsString());
+                addWalletTransaction(Pool.PENDING, tx);
+                doubleSpendPendingTxns.add(tx);
+                addTransactionsDependingOn(doubleSpendPendingTxns, getTransactions(true));
+                for (Transaction doubleSpendTx : doubleSpendPendingTxns) {
+                    doubleSpendTx.getConfidence().setConfidenceType(ConfidenceType.IN_CONFLICT);
+                    confidenceChanged.put(doubleSpendTx, TransactionConfidence.Listener.ChangeReason.TYPE);
+                }
+            } else {
+                // No conflict detected.
+                // Add to the pending pool and schedule confidence listener notifications.
+                log.info("->pending: {}", tx.getHashAsString());
                 tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-            //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
-            confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
-            /*if(tx instanceof TransactionLockRequest)  //TODO:InstantX
-                addWalletTransaction(Pool.INSTANTX_PENDING, tx);
-            else*/ addWalletTransaction(Pool.PENDING, tx);
+                if(tx instanceof TransactionLockRequest) //TODO:InstantX - may need to adjust the ones above too?
+                    tx.getConfidence().setIXType(IXType.IX_REQUEST);//setConfidenceType(ConfidenceType.INSTANTX_PENDING);
+                //else tx.getConfidence().setConfidenceType(ConfidenceType.PENDING);
+                confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.TYPE);
+                addWalletTransaction(Pool.PENDING, tx);
+            }
+            if (log.isInfoEnabled())
+                log.info("Estimated balance is now: {}", getBalance(BalanceType.ESTIMATED).toFriendlyString());
+
+
             // Mark any keys used in the outputs as "used", this allows wallet UI's to auto-advance the current key
             // they are showing to the user in qr codes etc.
             markKeysAsUsed(tx);
@@ -2318,17 +2365,85 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
             }
 
             isConsistentOrThrow();
+
             //Dash Specific
             if(tx.getConfidence().isIX() && tx.getConfidence().getSource() == Source.SELF) {
-                context.instantx.mapTxLockReq.put(tx.getHash(), tx);
-                context.instantx.createNewLock((TransactionLockRequest)tx);
+                context.instantx.processTxLockRequest((TransactionLockRequest)tx); // TODO rdw
             }
+
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
             lock.unlock();
         }
         return true;
+    }
+
+
+    /**
+     * Finds transactions in the specified candidates that double spend "tx". Not a general check, but it can work even if
+     * the double spent inputs are not ours.
+     * @return The set of transactions that double spend "tx".
+     */
+    private Set<Transaction> findDoubleSpendsAgainst(Transaction tx, Map<Sha256Hash, Transaction> candidates) {
+        checkState(lock.isHeldByCurrentThread());
+        if (tx.isCoinBase()) return Sets.newHashSet();
+        // Compile a set of outpoints that are spent by tx.
+        HashSet<TransactionOutPoint> outpoints = new HashSet<TransactionOutPoint>();
+        for (TransactionInput input : tx.getInputs()) {
+            outpoints.add(input.getOutpoint());
+        }
+        // Now for each pending transaction, see if it shares any outpoints with this tx.
+        Set<Transaction> doubleSpendTxns = Sets.newHashSet();
+        for (Transaction p : candidates.values()) {
+            for (TransactionInput input : p.getInputs()) {
+                // This relies on the fact that TransactionOutPoint equality is defined at the protocol not object
+                // level - outpoints from two different inputs that point to the same output compare the same.
+                TransactionOutPoint outpoint = input.getOutpoint();
+                if (outpoints.contains(outpoint)) {
+                    // It does, it's a double spend against the candidates, which makes it relevant.
+                    doubleSpendTxns.add(p);
+                }
+            }
+        }
+        return doubleSpendTxns;
+    }
+
+
+    /** Finds if tx is NOT spending other txns which are in the specified confidence type */
+    private boolean isNotSpendingTxnsInConfidenceType(Transaction tx, ConfidenceType confidenceType) {
+        for (TransactionInput txInput : tx.getInputs()) {
+            Transaction connectedTx = this.getTransaction(txInput.getOutpoint().getHash());
+            if (connectedTx != null && connectedTx.getConfidence().getConfidenceType().equals(confidenceType)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Adds to txSet all the txns in txPool spending outputs of txns in txSet,
+     * and all txns spending the outputs of those txns, recursively.
+     */
+    void addTransactionsDependingOn(Set<Transaction> txSet, Set<Transaction> txPool) {
+        Map<Sha256Hash, Transaction> txQueue = new LinkedHashMap<Sha256Hash, Transaction>();
+        for (Transaction tx : txSet) {
+            txQueue.put(tx.getHash(), tx);
+        }
+        while(!txQueue.isEmpty()) {
+            Transaction tx = txQueue.remove(txQueue.keySet().iterator().next());
+            for (Transaction anotherTx : txPool) {
+                if (anotherTx.equals(tx)) continue;
+                for (TransactionInput input : anotherTx.getInputs()) {
+                    if (input.getOutpoint().getHash().equals(tx.getHash())) {
+                        if (txQueue.get(anotherTx.getHash()) == null) {
+                            txQueue.put(anotherTx.getHash(), anotherTx);
+                            txSet.add(anotherTx);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -3433,7 +3548,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         }
 
         /**
-         * <p>Creates a new SendRequest to the given pubkey for the given value.</p>
+         * <p>Creates a new SendRequest to the given pubKeyCollateralAddress for the given value.</p>
          *
          * <p>Be careful to check the output's value is reasonable using
          * {@link TransactionOutput#getMinNonDustValue(Coin)} afterwards or you risk having the transaction
@@ -4383,7 +4498,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
 
     /**
      * If we are watching any scripts, the bloom filter must update on peers whenever an output is
-     * identified.  This is because we don't necessarily have the associated pubkey, so we can't
+     * identified.  This is because we don't necessarily have the associated pubKeyCollateralAddress, so we can't
      * watch for it on spending transactions.
      */
     @Override

@@ -159,7 +159,7 @@ public class ScriptBuilder {
     }
 
     /**
-     * Creates a scriptSig that can redeem a pay-to-pubkey output.
+     * Creates a scriptSig that can redeem a pay-to-pubKeyCollateralAddress output.
      * If given signature is null, incomplete scriptSig will be created with OP_0 instead of signature
      */
     public static Script createInputScript(@Nullable TransactionSignature signature) {

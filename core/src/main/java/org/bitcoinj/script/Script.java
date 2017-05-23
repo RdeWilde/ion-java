@@ -211,7 +211,7 @@ public class Script {
     }
 
     /**
-     * Returns true if this script is of the form <pubkey> OP_CHECKSIG. This form was originally intended for transactions
+     * Returns true if this script is of the form <pubKeyCollateralAddress> OP_CHECKSIG. This form was originally intended for transactions
      * where the peers talked to each other directly via TCP/IP, but has fallen out of favor with time due to that mode
      * of operation being susceptible to man-in-the-middle attacks. It is still used in coinbase outputs and can be
      * useful more exotic types of transaction, but today most payments are to addresses.
@@ -222,7 +222,7 @@ public class Script {
     }
 
     /**
-     * Returns true if this script is of the form DUP HASH160 <pubkey hash> EQUALVERIFY CHECKSIG, ie, payment to an
+     * Returns true if this script is of the form DUP HASH160 <pubKeyCollateralAddress hash> EQUALVERIFY CHECKSIG, ie, payment to an
      * address like 1VayNert3x1KzbpzMGt2qdqrAThiRovi8. This form was originally intended for the case where you wish
      * to send somebody money with a written code because their node is offline, but over time has become the standard
      * way to make payments due to the short and recognizable base58 form addresses come in.
@@ -245,7 +245,7 @@ public class Script {
     }
 
     /**
-     * <p>If a program matches the standard template DUP HASH160 &lt;pubkey hash&gt; EQUALVERIFY CHECKSIG
+     * <p>If a program matches the standard template DUP HASH160 &lt;pubKeyCollateralAddress hash&gt; EQUALVERIFY CHECKSIG
      * then this function retrieves the third element.
      * In this case, this is useful for fetching the destination address of a transaction.</p>
      * 
@@ -433,7 +433,7 @@ public class Script {
         } else if (isSentToMultiSig()) {
             sigsPrefixCount = 1; // OP_0 <sig>*
         } else if (isSentToAddress()) {
-            sigsSuffixCount = 1; // <sig> <pubkey>
+            sigsSuffixCount = 1; // <sig> <pubKeyCollateralAddress>
         }
         return ScriptBuilder.updateScriptWithSignature(scriptSig, sigBytes, index, sigsPrefixCount, sigsSuffixCount);
     }
@@ -598,7 +598,7 @@ public class Script {
             ScriptChunk nChunk = chunks.get(0);
             return Script.decodeFromOpN(nChunk.opcode);
         } else if (isSentToAddress() || isSentToRawPubKey()) {
-            // pay-to-address and pay-to-pubkey require single sig
+            // pay-to-address and pay-to-pubKeyCollateralAddress require single sig
             return 1;
         } else if (isPayToScriptHash()) {
             throw new IllegalStateException("For P2SH number of signatures depends on redeem script");
@@ -623,7 +623,7 @@ public class Script {
             // scriptSig: <sig>
             return SIG_SIZE;
         } else if (isSentToAddress()) {
-            // scriptSig: <sig> <pubkey>
+            // scriptSig: <sig> <pubKeyCollateralAddress>
             int uncompressedPubKeySize = 65;
             return SIG_SIZE + (pubKey != null ? pubKey.getPubKey().length : uncompressedPubKeySize);
         } else {
@@ -1327,7 +1327,7 @@ public class Script {
             throw new ScriptException("Attempted OP_CHECKMULTISIG(VERIFY) on a stack with size < 2");
         int pubKeyCount = castToBigInteger(stack.pollLast()).intValue();
         if (pubKeyCount < 0 || pubKeyCount > 20)
-            throw new ScriptException("OP_CHECKMULTISIG(VERIFY) with pubkey count out of range");
+            throw new ScriptException("OP_CHECKMULTISIG(VERIFY) with pubKeyCollateralAddress count out of range");
         opCount += pubKeyCount;
         if (opCount > 201)
             throw new ScriptException("Total op count > 201 during OP_CHECKMULTISIG(VERIFY)");

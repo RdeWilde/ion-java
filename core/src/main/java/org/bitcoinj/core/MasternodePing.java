@@ -20,13 +20,10 @@ import org.darkcoinj.DarkSendSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Arrays;
 
-import static com.hashengineering.crypto.X11.x11Digest;
 import static org.bitcoinj.core.Utils.int64ToByteStreamLE;
 
 public class MasternodePing extends Message implements Serializable {
@@ -145,7 +142,7 @@ public class MasternodePing extends Message implements Serializable {
         vchSig.bitcoinSerialize(stream);
     }
 
-    boolean checkAndUpdate(boolean fRequireEnabled)
+    boolean checkAndUpdate(boolean fRequireEnabled, boolean fCheckSigTimeOnly)
     {
         if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
             log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future "+ vin.toString());
@@ -159,22 +156,31 @@ public class MasternodePing extends Message implements Serializable {
             return false;
         }
 
+        if(fCheckSigTimeOnly) {
+            Masternode pmn = context.masternodeManager.find(vin);
+            if(pmn != null) return verifySignature(pmn.pubKeyMasternode);
+            return true;
+        }
+
         log.info("masternode - CMasternodePing::CheckAndUpdate - New Ping - "+ getHash().toString() +" - "+ blockHash.toString()+" - "+ sigTime);
 
         // see if we have this Masternode
         Masternode pmn = context.masternodeManager.find(vin);
         if(pmn != null && pmn.protocolVersion >= context.masternodePayments.getMinMasternodePaymentsProto())
         {
-            if (fRequireEnabled && !pmn.isEnabled()) return false;
+            if (fRequireEnabled && !pmn.isEnabled() && !pmn.isPreEnabled()) return false;
 
             // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.ToString());
             // update only if there is no known ping for this masternode or
             // last ping was more then MASTERNODE_MIN_MNP_SECONDS-60 ago comparing to this one
             if(!pmn.isPingedWithin(MASTERNODE_MIN_MNP_SECONDS - 60, sigTime)) {
+                if(!verifySignature(pmn.pubKeyMasternode))
+                    return false;
+
                 String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
 
                 StringBuilder errorMessage = new StringBuilder();
-                if (!DarkSendSigner.verifyMessage(pmn.pubkey2, vchSig, strMessage, errorMessage)) {
+                if (!DarkSendSigner.verifyMessage(pmn.pubKeyMasternode, vchSig, strMessage, errorMessage)) {
                     log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString());
                     //nDos = 33;
                     return false;
@@ -251,7 +257,24 @@ public class MasternodePing extends Message implements Serializable {
     }
     boolean checkAndUpdate()
     {
-        return checkAndUpdate(false);
+        return checkAndUpdate(true, false);
+    }
+    boolean checkAndUpdate(boolean fRequireEnabled)
+    {
+        return checkAndUpdate(fRequireEnabled, false);
+    }
+
+    boolean verifySignature(PublicKey pubKeyMasternode) {
+
+        String strMessage = vin.toStringCpp() + blockHash.toString() + sigTime;
+
+        StringBuilder errorMessage = new StringBuilder();
+        if (!DarkSendSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
+            log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString() + " Error " + errorMessage);
+            //nDos = 33;
+            return false;
+        }
+        return true;
     }
 
     public boolean equals(Object o)
@@ -269,7 +292,7 @@ public class MasternodePing extends Message implements Serializable {
         return false;
     }
 
-    static MasternodePing EMPTY = new MasternodePing(Context.get());
+    public static MasternodePing EMPTY = new MasternodePing(Context.get());
 
     static MasternodePing empty() { return EMPTY; }
 
