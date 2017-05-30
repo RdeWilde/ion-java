@@ -15,4 +15,4 @@ libs/
 checkpoints
 checkpoints-testnet.txt
 checkpoints.txt
-target/
+**/target/
