@@ -16,3 +16,4 @@ checkpoints
 checkpoints-testnet.txt
 checkpoints.txt
 **/target/
+/examples/
