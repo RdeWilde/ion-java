@@ -135,17 +135,17 @@ public class MasternodeBroadcast extends Masternode {
     boolean checkAndUpdate()//int& nDos
     {
         // make sure signature isn't in the future (past is OK)
-        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
+        if (sigTime > Utils.currentTimeSeconds() + 60 * 60 * 24) { // TODO rdw
             log.info("CMasternodeBroadcast::CheckAndUpdate - Signature rejected, too far into the future " + vin.toString());
             //nDos = 1;
             return false;
         }
 
         // incorrect ping or its sigTime
-        if(lastPing.equals(MasternodePing.EMPTY) || !lastPing.checkAndUpdate(false)) // TODO rdw
+        if(lastPing == null || lastPing.equals(MasternodePing.EMPTY) || !lastPing.checkAndUpdate(false, true)) // TODO rdw
             return false;
 
-        if (protocolVersion < context.masternodePayments.getMinMasternodePaymentsProto()) {
+        if (protocolVersion < MasternodePayments.MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2) { // context.masternodePayments.getMinMasternodePaymentsProto()
             log.info("CMasternodeBroadcast::CheckAndUpdate - ignoring outdated Masternode " + vin.toString() + " protocol version " + protocolVersion);
             return false;
         }
@@ -185,9 +185,9 @@ public class MasternodeBroadcast extends Masternode {
             return false;
         }
 
-        if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
-            if (address.getPort() != 9999) return false;
-        } else if (address.getPort() == 9999) return false;
+//        if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
+//            if (address.getPort() != 9999) return false;
+//        } else if (address.getPort() == 9999) return false;
 
         //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
         Masternode pmn = context.masternodeManager.find(vin);
@@ -307,9 +307,10 @@ public class MasternodeBroadcast extends Masternode {
                 return false;
             }
 
-            if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
-                if (address.getPort() != 9999) return false;
-            } else if (address.getPort() == 9999) return false;
+            // TODO rdw FIXME wtf?
+//            if (params.getId().equals(NetworkParameters.ID_MAINNET)) {
+//                if (address.getPort() != 9999) return false;
+//            } else if (address.getPort() == 9999) return false;
 
             //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
             Masternode pmn = context.masternodeManager.find(vin);
@@ -350,7 +351,7 @@ public class MasternodeBroadcast extends Masternode {
             return true;
 
         // incorrect ping or its sigTime
-        if(lastPing == MasternodePing.EMPTY || !lastPing.checkAndUpdate(false)) // TODO rdw
+        if(lastPing == null || lastPing == MasternodePing.EMPTY || !lastPing.checkAndUpdate(false, true)) // TODO rdw
             return false;
 
         // search existing Masternode list
@@ -529,18 +530,18 @@ public class MasternodeBroadcast extends Masternode {
             //
 
 
-            strMessage = address.toString() + sigTime + Utils.HEX.encode(Utils.reverseBytes(pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(pubKeyMasternode.getId())) + protocolVersion;
+            strMessage = address.toString() + sigTime + Utils.HEX.encode(Utils.reverseBytes(pubKeyCollateralAddress.getId())) + Utils.HEX.encode(Utils.reverseBytes(pubKeyMasternode.getId())) + protocolVersion + donationAddress.toString() + donationPercentage;
 
             log.info("CMasternodeBroadcast::VerifySignature - sanitized strMessage: "+Utils.sanitizeString(strMessage)+", pubKeyCollateralAddress address: "+new Address(params, pubKeyCollateralAddress.getId()).toString()+", sig: %s\n" +
                     Base64.toBase64String(sig.getBytes()));
 
             //LogPrint("masternode", "CMasternodeBroadcast::VerifySignature - strMessage: %s, pubKeyCollateralAddress address: %s, sig: %s\n", strMessage, CBitcoinAddress(pubKeyCollateralAddress.GetID()).ToString(), EncodeBase64(&vchSig[0], vchSig.size()));
-
-            if(!DarkSendSigner.verifyMessage(pubKeyCollateralAddress, sig, strMessage, errorMessage)){
-                log.warn("CMasternodeBroadcast::VerifySignature - Got bad Masternode address signature, error: " + errorMessage);
-                //nDos = 100;
-                return false;
-            }
+// TODO rdw FIXME
+//            if(!DarkSendSigner.verifyMessage(pubKeyCollateralAddress, sig, strMessage, errorMessage)){
+//                log.warn("CMasternodeBroadcast::VerifySignature - Got bad Masternode address signature, error: " + errorMessage);
+//                //nDos = 100;
+//                return false;
+//            }
         }
 
         return true;

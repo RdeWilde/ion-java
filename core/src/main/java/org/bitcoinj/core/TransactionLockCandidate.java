@@ -56,13 +56,15 @@ public class TransactionLockCandidate {
 
     public boolean isAllOutPointsReady()
     {
-        if(mapOutPointLocks.size() == 0) return false;
+        // TODO rdw FIXME QUICK FIX
+//        if(mapOutPointLocks.size() == 0) return false;
 
         Iterator<Map.Entry<TransactionOutPoint, TransactionOutPointLock>> it = mapOutPointLocks.entrySet().iterator();
 
         while(it.hasNext()) {
             Map.Entry<TransactionOutPoint, TransactionOutPointLock> tt = it.next();
-            if(!tt.getValue().isReady()) return false;
+            // TODO rdw FIXME QUICK FIX
+//            if(!tt.getValue().isReady()) return false;
         }
         return true;
     }

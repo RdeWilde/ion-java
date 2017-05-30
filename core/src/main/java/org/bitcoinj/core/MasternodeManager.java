@@ -273,9 +273,9 @@ public class MasternodeManager extends AbstractManager {
         }
     }
 
+
     boolean checkMnbAndUpdateMasternodeList(MasternodeBroadcast mnb) {
         log.info("masternode-CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: {}\n", mnb.vin.toString());
-
         lock.lock();
         try {
             if (mapSeenMasternodeBroadcast.containsKey(mnb.getHash())) { //seen

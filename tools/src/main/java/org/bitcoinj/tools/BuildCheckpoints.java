@@ -17,6 +17,7 @@
 
 package org.bitcoinj.tools;
 
+import com.google.common.base.Charsets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.MainNetParams;
@@ -24,15 +25,8 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
-import com.google.common.base.Charsets;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.security.DigestOutputStream;
@@ -81,7 +75,7 @@ public class BuildCheckpoints {
             @Override
             public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
                 int height = block.getHeight();
-                if (height % PARAMS.getInterval() == 0 && block.getHeader().getTimeSeconds() <= oneMonthAgo) {
+                if (height % PARAMS.getInterval() == 0) { // && block.getHeader().getTimeSeconds() <= oneMonthAgo) {
                     System.out.println(String.format("Checkpointing block %s at height %d",
                             block.getHeader().getHash(), block.getHeight()));
                     checkpoints.put(height, block);

@@ -481,7 +481,8 @@ public class MasterNodeSystem {
 //        }
 
         if(context.getId().equals(NetworkParameters.ID_MAINNET) == false){
-            if(m.addr.getPort() != 9999) return;
+            // TODO rdw FIXME wtf?
+//            if(m.addr.getPort() != 9999) return;
         }
 
         //search existing masternode list, this is where we update existing masternodes with new dsee broadcasts

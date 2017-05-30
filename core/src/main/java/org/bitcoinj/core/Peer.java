@@ -426,11 +426,41 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof RejectMessage) {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if(m instanceof DarkSendQueue) {
+            // TODO
             //do nothing
         } else if (m instanceof DarkSendElectionEntryMessage) {
-            MasterNodeSystem.get().processDarkSendElectionEntry(this, context.getParams(), (DarkSendElectionEntryMessage)m);
+            // TODO
+// public Masternode(PeerAddress peerAddress, TransactionInput vin, PublicKey pubkey, MasternodeSignature masternodeSignature, long sigTime, PublicKey pubkey2, int protocolVersion) {
+            DarkSendElectionEntryMessage dsee = (DarkSendElectionEntryMessage) m;
+
+            Masternode mn = new Masternode(new PeerAddress(dsee.addr.getAddr(), dsee.addr.getPort(), dsee.protocolVersion), dsee.vin, dsee.pubkey, new MasternodeSignature(dsee.vchSig), dsee.sigTime, dsee.pubkey2, dsee.protocolVersion);
+//            mn.activeState
+            mn.params = params;
+            mn.context = context;
+            mn.protocolVersion = dsee.protocolVersion;
+            MasternodeBroadcast mnb = new MasternodeBroadcast(mn);
+            MasternodePing mnp = new MasternodePing(context);
+            mnp.vin = dsee.vin;
+            mnp.vchSig = new MasternodeSignature(dsee.vchSig);
+            mnp.sigTime = dsee.sigTime;
+            mnp.blockHash = Sha256Hash.ZERO_HASH;
+            mnp.protocolVersion = dsee.protocolVersion;
+            mnb.lastPing = mnp;
+            mnb.protocolVersion = dsee.protocolVersion;
+            mnb.donationPercentage = dsee.donationPercentage;
+            mnb.donationAddress = dsee.donationAddress;
+            context.masternodeManager.processMasternodeBroadcast(mnb);
+//            MasterNodeSystem.get().processDarkSendElectionEntry(this, context.getParams(), (DarkSendElectionEntryMessage)m);
         } else if (m instanceof DarkSendElectionEntryPingMessage) {
-            MasterNodeSystem.get().processDarkSendElectionEntryPing(this, context.getParams(), (DarkSendElectionEntryPingMessage)m);
+            DarkSendElectionEntryPingMessage dseep = (DarkSendElectionEntryPingMessage) m;
+            MasternodePing mnp = new MasternodePing(context);
+            mnp.vin = dseep.vin;
+            mnp.vchSig = new MasternodeSignature(dseep.vchSig);
+            mnp.sigTime = dseep.sigTime;
+            mnp.blockHash = Sha256Hash.ZERO_HASH; // TODO rdw wrong hash? FIXME
+            mnp.protocolVersion = dseep.protocolVersion;
+            context.masternodeManager.processMasternodePing(this, mnp);
+//            MasterNodeSystem.get().processDarkSendElectionEntryPing(this, context.getParams(), (DarkSendElectionEntryPingMessage)m);
         } else if(m instanceof MasternodeBroadcast) {
             if(!context.isLiteMode())
                 context.masternodeManager.processMasternodeBroadcast((MasternodeBroadcast)m);

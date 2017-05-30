@@ -211,7 +211,7 @@ public class WalletTool {
                 .defaultsTo(ValidationMode.SPV);
         OptionSpec<String> chainFlag = parser.accepts("chain").withRequiredArg();
         // For addkey/delkey.
-        parser.accepts("pubkey").withRequiredArg();
+        parser.accepts("pubKeyCollateralAddress").withRequiredArg();
         parser.accepts("privkey").withRequiredArg();
         parser.accepts("addr").withRequiredArg();
         parser.accepts("peers").withRequiredArg();
@@ -947,7 +947,7 @@ public class WalletTool {
 
     private static void addKey() {
         // If we're being given precise details, we have to import the key.
-        if (options.has("privkey") || options.has("pubkey")) {
+        if (options.has("privkey") || options.has("pubKeyCollateralAddress")) {
             importKey();
         } else {
             if (options.has(lookaheadSize)) {
@@ -1009,13 +1009,13 @@ public class WalletTool {
                 }
                 key = ECKey.fromPrivate(new BigInteger(1, decode));
             }
-            if (options.has("pubkey")) {
+            if (options.has("pubKeyCollateralAddress")) {
                 // Give the user a hint.
-                System.out.println("You don't have to specify --pubkey when a private key is supplied.");
+                System.out.println("You don't have to specify --pubKeyCollateralAddress when a private key is supplied.");
             }
             key.setCreationTimeSeconds(creationTimeSeconds);
-        } else if (options.has("pubkey")) {
-            byte[] pubkey = Utils.parseAsHexOrBase58((String) options.valueOf("pubkey"));
+        } else if (options.has("pubKeyCollateralAddress")) {
+            byte[] pubkey = Utils.parseAsHexOrBase58((String) options.valueOf("pubKeyCollateralAddress"));
             key = ECKey.fromPublicOnly(pubkey);
             key.setCreationTimeSeconds(creationTimeSeconds);
         } else {
@@ -1050,10 +1050,10 @@ public class WalletTool {
     }
 
     private static void deleteKey() {
-        String pubkey = (String) options.valueOf("pubkey");
+        String pubkey = (String) options.valueOf("pubKeyCollateralAddress");
         String addr = (String) options.valueOf("addr");
         if (pubkey == null && addr == null) {
-            System.err.println("One of --pubkey or --addr must be specified.");
+            System.err.println("One of --pubKeyCollateralAddress or --addr must be specified.");
             return;
         }
         ECKey key = null;

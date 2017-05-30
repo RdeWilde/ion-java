@@ -99,7 +99,8 @@ public class MasternodeSignature extends ChildMessage {
 
     MasternodeSignature duplicate()
     {
-        MasternodeSignature copy = new MasternodeSignature(params, getBytes(), 0);
+        MasternodeSignature copy = new MasternodeSignature(this.bytes);
+        copy.params = this.params;
 
         return copy;
     }

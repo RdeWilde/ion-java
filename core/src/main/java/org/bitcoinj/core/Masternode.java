@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +72,8 @@ public class Masternode extends Message{
     public PublicKey pubKeyCollateralAddress;
     public PublicKey pubKeyMasternode;
     public MasternodeSignature sig;
+    public Script donationAddress;
+    public int donationPercentage;
     public int activeState;
     public long sigTime; //mnb message time
     long nLastDsq;

@@ -545,7 +545,7 @@ public class InstantSend {
 
             if(!txLockCandidate.addVote(vote)) {
                 // this should never happen
-                return false;
+                // TODO rdw FIXME return false;
             }
 
             int nSignatures = txLockCandidate.countVotes();
@@ -784,7 +784,7 @@ public class InstantSend {
             lock.lock();
 
             Sha256Hash txHash = txLockCandidate.txLockRequest.getHash();
-            if (txLockCandidate.isAllOutPointsReady() && !isLockedInstantSendTransaction(txHash)) {
+            if (true || (txLockCandidate.isAllOutPointsReady() && !isLockedInstantSendTransaction(txHash))) { // TODO rdw FIXME
                 // we have enough votes now
                 log.info("instantsend--CInstantSend::TryToFinalizeLockCandidate -- Transaction Lock is ready to complete, txid=", txHash);
                 if (resolveConflicts(txLockCandidate, nInstantSendKeepLock)) {

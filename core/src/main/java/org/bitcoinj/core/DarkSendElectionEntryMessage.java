@@ -1,5 +1,6 @@
 package org.bitcoinj.core;
 
+import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,8 @@ public class DarkSendElectionEntryMessage extends Message {
     int current;
     long lastUpdated;
     int protocolVersion;
+    public int donationPercentage = 0;
+    public Script donationAddress;
 
     private transient int optimalEncodingMessageSize;
 
@@ -127,7 +130,7 @@ public class DarkSendElectionEntryMessage extends Message {
         cursor += pubkey.getMessageSize();
 
         pubkey2 = new PublicKey(params, payload, cursor, this, parseLazy, parseRetain);
-        cursor += pubkey.getMessageSize();
+        cursor += pubkey2.getMessageSize();
 
         count = (int)readUint32();
         current = (int)readUint32();
@@ -136,11 +139,13 @@ public class DarkSendElectionEntryMessage extends Message {
 
         protocolVersion = (int)readUint32();
         // DonationAddress CScript
-//        int scriptLen = (int) readVarInt();
-//        byte [] scriptBytes = readBytes(scriptLen);
+        int scriptLen = (int) readVarInt();
+        byte [] scriptBytes = readBytes(scriptLen);
+        donationAddress = new Script(scriptBytes);
+        cursor += scriptBytes.length;
 //
 //        // DonationPercentage
-//        int donationPercentage = (int) readUint32();
+        donationPercentage = (int) readUint32();
 
         length = cursor - offset;
 

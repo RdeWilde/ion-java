@@ -144,13 +144,13 @@ public class MasternodePing extends Message implements Serializable {
 
     boolean checkAndUpdate(boolean fRequireEnabled, boolean fCheckSigTimeOnly)
     {
-        if (sigTime > Utils.currentTimeSeconds() + 60 * 60) {
+        if (sigTime > Utils.currentTimeSeconds() + 60 * 60 * 24) { // TODO rdw GetAdjustedTime
             log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future "+ vin.toString());
             //nDos = 1;
             return false;
         }
 
-        if (sigTime <= Utils.currentTimeSeconds() - 60 * 60) {
+        if (sigTime <= Utils.currentTimeSeconds() - 60 * 60 * 24) { // TODO rdw GetAdjustedTime
             log.info("CMasternodePing::CheckAndUpdate - Signature rejected, too far into the past {} - {} {} \n", vin.toString(), sigTime, Utils.currentTimeSeconds());
             //nDos = 1;
             return false;
@@ -183,7 +183,7 @@ public class MasternodePing extends Message implements Serializable {
                 if (!DarkSendSigner.verifyMessage(pmn.pubKeyMasternode, vchSig, strMessage, errorMessage)) {
                     log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString());
                     //nDos = 33;
-                    return false;
+//                    return false; // TODO rdw FIXMEs
                 }
 
                 try {
@@ -194,7 +194,7 @@ public class MasternodePing extends Message implements Serializable {
 
                         if (storedBlock.getHeight() < context.masternodeManager.blockChain.getChainHead().getHeight() - 24) {
                             log.info("CMasternodePing::CheckAndUpdate - Masternode {} block hash {} is too old", vin.toString(), blockHash.toString());
-                            return false;
+//                            return false; // TODO rdw FIXME
                         }
                     }
                     else
@@ -240,7 +240,7 @@ public class MasternodePing extends Message implements Serializable {
                 }
 
                 pmn.check(true);
-                if(pmn.isEnabled()) return false;
+//                if(pmn.isEnabled()) return false; // TODO rdw FIXME
 
                 log.info("masternode-CMasternodePing::CheckAndUpdate - Masternode ping accepted, vin: "+ vin.toString());
 
@@ -251,17 +251,18 @@ public class MasternodePing extends Message implements Serializable {
             //nDos = 1; //disable, this is happening frequently and causing banned peers
             return false;
         }
+
         log.info("masternode - CMasternodePing::CheckAndUpdate - Couldn't find compatible Masternode entry, vin: "+ vin.toString());
 
         return false;
     }
-    boolean checkAndUpdate()
-    {
-        return checkAndUpdate(true, false);
+    boolean checkAndUpdate()  {
+        return checkAndUpdate(true, false); // TODO rdw
+//        return checkAndUpdate(true, true);
     }
-    boolean checkAndUpdate(boolean fRequireEnabled)
-    {
-        return checkAndUpdate(fRequireEnabled, false);
+    boolean checkAndUpdate(boolean fRequireEnabled) {
+        return checkAndUpdate(fRequireEnabled, false); // TODO rdw
+//        return checkAndUpdate(fRequireEnabled, true);
     }
 
     boolean verifySignature(PublicKey pubKeyMasternode) {
@@ -272,7 +273,7 @@ public class MasternodePing extends Message implements Serializable {
         if (!DarkSendSigner.verifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
             log.info("CMasternodePing::CheckAndUpdate - Got bad Masternode address signature " + vin.toString() + " Error " + errorMessage);
             //nDos = 33;
-            return false;
+//            return false; // TODO rdw FIXMEs
         }
         return true;
     }
