@@ -17,3 +17,6 @@ checkpoints-testnet.txt
 checkpoints.txt
 **/target/
 /examples/
+/core/target/
+/tools/target/
+/wallettemplate/target/
