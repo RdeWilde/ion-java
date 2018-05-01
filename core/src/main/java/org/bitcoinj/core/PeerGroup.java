@@ -1549,7 +1549,7 @@ public class PeerGroup implements TransactionBroadcaster {
     }
 
     @GuardedBy("lock") private int stallPeriodSeconds = 10;
-    @GuardedBy("lock") private int stallMinSpeedBytesSec = Block.HEADER_SIZE * 20;
+    @GuardedBy("lock") private int stallMinSpeedBytesSec = Block.HEADER_SIZE * 20; // TODO dynamic based on Block.getHeaderSize(height)
 
     /**
      * Configures the stall speed: the speed at which a peer is considered to be serving us the block chain

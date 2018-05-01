@@ -88,9 +88,9 @@ public class CoinDefinition {
     // Ion
     //
 
-    public static final int protocolVersion = 95605;
-    public static final int minProtocolVersion = 95050; // MIN_PEER_PROTO_VERSION
-    public static final long blockVersion = 7;
+    public static final int protocolVersion = 95700;
+    public static final int minProtocolVersion = 95700; // MIN_PEER_PROTO_VERSION
+    public static final long blockVersion = 8;
     public static final int protocolV1RetargetingFixed = 0; // main.h
     public static final long txTimeProtocolV3 = 0; // main.h // TODO ?
 

@@ -182,8 +182,8 @@ public class StoredBlock implements Serializable {
         buffer.get(chainWorkBytes);
         BigInteger chainWork = new BigInteger(1, chainWorkBytes);
         int height = buffer.getInt();  // +4 bytes
-        byte[] header = new byte[Block.HEADER_SIZE + 1];    // Extra byte for the 00 transactions length.
-        buffer.get(header, 0, Block.HEADER_SIZE);
+        byte[] header = new byte[Block.getHeaderSize(height) + 1];    // Extra byte for the 00 transactions length.
+        buffer.get(header, 0, Block.getHeaderSize(height));
         return new StoredBlock(new Block(params, header), chainWork, height);
     }
     
@@ -194,8 +194,8 @@ public class StoredBlock implements Serializable {
         buffer.get(chainWorkBytes);
         BigInteger chainWork = new BigInteger(1, chainWorkBytes);
         int height = buffer.getInt();  // +4 bytes
-        byte[] header = new byte[Block.HEADER_SIZE + 1];    // Extra byte for the 00 transactions length.
-        buffer.get(header, 0, Block.HEADER_SIZE);
+        byte[] header = new byte[Block.getHeaderSize(height) + 1];    // Extra byte for the 00 transactions length.
+        buffer.get(header, 0, Block.getHeaderSize(height));
         StoredBlock storedBlock = new StoredBlock(new Block(params, header), chainWork, height);
         byte[] rawNextBlockHash = new byte[32];
         buffer.get(rawNextBlockHash);

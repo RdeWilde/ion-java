@@ -29,8 +29,8 @@ public class MasterNodeSystem {
 
     public final static int MASTERNODE_MIN_CONFIRMATIONS          = 15;
     public final static int MASTERNODE_MIN_DSEEP_SECONDS           =(30*60);
-    public final static int MASTERNODE_MIN_DSEE_SECONDS            =(5*60)    ;
-    public final static int MASTERNODE_PING_SECONDS                =(1*60)   ;
+    public final static int MASTERNODE_MIN_DSEE_SECONDS            =(15*60)    ;
+    public final static int MASTERNODE_PING_SECONDS                =(5*60)   ;
     public final static int MASTERNODE_EXPIRATION_SECONDS          =(65*60) ;
     public final static int MASTERNODE_REMOVAL_SECONDS             =(70*60);
 

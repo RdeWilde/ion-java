@@ -27,7 +27,7 @@ public class MasternodeManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(MasternodeManager.class);
 
     public static final int MASTERNODES_DUMP_SECONDS =              (15*60);
-    public static final int MASTERNODES_DSEG_SECONDS    =           (3*60*60);
+    public static final int MASTERNODES_DSEG_SECONDS    =           (5*60);
     // critical section to protect the inner data structures
     //mutable CCriticalSection cs;
     ReentrantLock lock = Threading.lock("MasternodeManager");
@@ -942,7 +942,7 @@ public class MasternodeManager extends AbstractManager {
                 }
             }
 
-            pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params,null, new byte[0])));
+            pnode.sendMessage(new DarkSendEntryGetMessage(new TransactionInput(params, null, new byte[0])));
             //pnode -> PushMessage("dseg", CTxIn());
             long askAgain = Utils.currentTimeSeconds() + MasternodeManager.MASTERNODES_DSEG_SECONDS;
             mWeAskedForMasternodeList.put(new NetAddress(pnode.getAddress().getAddr()),askAgain);

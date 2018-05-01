@@ -57,6 +57,23 @@ public class Block extends Message {
 
     /** How many bytes are required to represent a block header WITHOUT the trailing 00 length byte. */
     public static final int HEADER_SIZE = 80;
+    public static final int HEADER_SIZE_V8 = 112;
+
+    public static int getHeaderSize(int height) {
+        if (height > 550000) {
+            return HEADER_SIZE_V8;
+        }
+
+        return HEADER_SIZE;
+    }
+
+    public static int getHeaderSizeByVersion(long version) {
+        if (version > 7) {
+            return HEADER_SIZE_V8;
+        }
+
+        return HEADER_SIZE;
+    }
 
     static final long ALLOWED_TIME_DRIFT = 2 * 60 * 60; // Same value as official client.
 
@@ -90,6 +107,7 @@ public class Block extends Message {
     private long time;
     private long difficultyTarget; // "nBits"
     private long nonce;
+    private Sha256Hash accumulatiorCheckpoint;
     
     // stake ingredients
     private Sha256Hash nextBlockHash;
@@ -225,6 +243,8 @@ public class Block extends Message {
         time = readUint32();
         difficultyTarget = readUint32();
         nonce = readUint32();
+        if (version > 7)
+            accumulatiorCheckpoint = readHash();
 
         hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, cursor - offset));
 
@@ -239,8 +259,8 @@ public class Block extends Message {
         if (payload == null)
             return;
 
-        cursor = offset + HEADER_SIZE;
-        optimalEncodingMessageSize = HEADER_SIZE;
+        cursor = offset + getHeaderSizeByVersion(this.getVersion());
+        optimalEncodingMessageSize = getHeaderSizeByVersion(this.getVersion());
         if (payload.length == cursor) {
             // This message is just a header, it has no transactions.
             transactionsParsed = true;
@@ -315,10 +335,10 @@ public class Block extends Message {
             parseTransactions();
             length = cursor - offset;
         } else {
-            transactionBytesValid = !transactionsParsed || parseRetain && length > HEADER_SIZE;
-            masterNodeVotesBytesValid = !masterNodeVotesParsed || parseRetain && length > HEADER_SIZE;
+            transactionBytesValid = !transactionsParsed || parseRetain && length > getHeaderSizeByVersion(this.getVersion());
+            masterNodeVotesBytesValid = !masterNodeVotesParsed || parseRetain && length > getHeaderSizeByVersion(this.getVersion());;
         }
-        headerBytesValid = !headerParsed || parseRetain && length >= HEADER_SIZE;
+        headerBytesValid = !headerParsed || parseRetain && length >= getHeaderSizeByVersion(this.getVersion());;
     }
 
     /*
@@ -470,8 +490,8 @@ public class Block extends Message {
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
-        if (headerBytesValid && payload != null && payload.length >= offset + HEADER_SIZE) {
-            stream.write(payload, offset, HEADER_SIZE);
+        if (headerBytesValid && payload != null && payload.length >= offset + getHeaderSizeByVersion(this.getVersion())) {
+            stream.write(payload, offset, getHeaderSizeByVersion(this.getVersion()));
             return;
         }
         // fall back to manual write
@@ -493,7 +513,7 @@ public class Block extends Message {
 
         // confirmed we must have transactions either cached or as objects.
         if (transactionBytesValid && payload != null && payload.length >= offset + length) {
-            stream.write(payload, offset + HEADER_SIZE, length - HEADER_SIZE);
+            stream.write(payload, offset + getHeaderSizeByVersion(this.getVersion()), length - getHeaderSizeByVersion(this.getVersion()));
             return;
         }
 
@@ -529,7 +549,7 @@ public class Block extends Message {
 
         // At least one of the two cacheable components is invalid
         // so fall back to stream write since we can't be sure of the length.
-        ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length == UNKNOWN_LENGTH ? HEADER_SIZE + guessTransactionsLength() : length);
+        ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length == UNKNOWN_LENGTH ? getHeaderSizeByVersion(this.version) + guessTransactionsLength() : length);
         try {
             writeHeader(stream);
             writeTransactions(stream);
@@ -566,7 +586,7 @@ public class Block extends Message {
      */
     private int guessTransactionsLength() {
         if (transactionBytesValid)
-            return payload.length - HEADER_SIZE;
+            return payload.length - getHeaderSizeByVersion(this.version);
         if (transactions == null)
             return 0;
         int len = VarInt.sizeOf(transactions.size());
@@ -612,7 +632,7 @@ public class Block extends Message {
      */
     private Sha256Hash calculateHash() {
         try {
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getHeaderSizeByVersion(this.version));
             writeHeader(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
@@ -622,7 +642,7 @@ public class Block extends Message {
 
     private Sha256Hash calculateScryptHash() {
     	try {
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getHeaderSizeByVersion(this.version));
             writeHeader(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.scryptDigest(bos.toByteArray()));
         } catch (IOException e) {

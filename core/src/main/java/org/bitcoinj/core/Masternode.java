@@ -365,7 +365,7 @@ public class Masternode extends Message{
 
         nScanningErrorCount = (int)readUint32();
         nLastScanningErrorBlockHeight = (int)readUint32();
-        nBlockLastPaid = (int)readUint32();
+//        nBlockLastPaid = (int)readUint32();
 
 // TODO rdw new dash impl
 //        nTimeLastPaid = readInt64();
@@ -644,7 +644,7 @@ public class Masternode extends Message{
             if(now == -1)
                 now = Utils.currentTimeSeconds();
 
-            return (lastPing.equals(MasternodePing.empty()))
+            return (lastPing == null || lastPing.equals(MasternodePing.empty()))
                     ? false
                     : (now - lastPing.sigTime) < seconds;
         }
